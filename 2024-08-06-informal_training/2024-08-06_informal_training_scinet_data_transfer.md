@@ -33,40 +33,29 @@ Link: https://www.globus.org/
 
 ### Login and Directories
 
-1.  Login to OnDemand (try both Atlas and Ceres)
-
-<!-- -->
-
-1.  Use of PIV card now preferred, but ssh from PowerShell possible  
-2.  Note: Tabs across top of page to access interactive GUI\`s, Files,
-    and terminals.  
-
-<!-- -->
-
-2.  `Files` tab: Navigable directory via web interface
-
-<!-- -->
-
-1.  Find, create, and create directories  
-2.  `Upload` and `Download` options (click, drag, and drop style)  
-3.  Web interface good for smaller data, Globus recommended for big
+1.  Login to OnDemand (try both Atlas and Ceres)  
+    A. Use of PIV card now preferred, but ssh from PowerShell possible  
+    B. Note: Tabs across top of page to access interactive GUI\`s,
+    Files, and terminals.  
+2.  `Files` tab: Navigable directory via web interface  
+    A. Find, create, and create directories  
+    B. `Upload` and `Download` options (click, drag, and drop style)  
+    C. Web interface good for smaller data, Globus recommended for big
     data  
-
-<!-- -->
-
 3.  Where to save, keep, and archive data?  
     A. **Home** directory: Very small storage, good for individual
-    software installs B. **Project** directories: Project-specific, look
-    at *flavivirus_geospatial* and *fadru_fmd* projects as examples. i.
-    Same project names used on Ceres, Atlas, and Juno  
-    ii. Size determined by P.I.’s, may be increased as needed iii. This
-    is where computational work is performed C. **90daydata** directory:
-    includes a project-specific directory *unlimited* storage, but
-    deleted after 90days of being idle.  
+    software installs  
+    B. **Project** directories: Project-specific, look at
+    *flavivirus_geospatial* and *fadru_fmd* projects as examples.  
+    i. Same project names used on Ceres, Atlas, and Juno  
+    ii. Size determined by P.I.’s, may be increased as needed  
+    iii. This is where computational work is performed  
+    C. **90daydata** directory: includes a project-specific directory
+    *unlimited* storage, but deleted after 90days of being idle.  
     i. Best place for staging big data prior to prepossessing  
-    ii. Pull it into the **Project** directory as needed. D. **Juno**
-    directory: Long-term data archiving. Typically used when project is
-    complete to create enduring data record.
+    ii. Pull it into the **Project** directory as needed.  
+    D. **Juno** directory: Long-term data archiving. Typically used when
+    project is complete to create enduring data record.
 
 ### Globus
 
