@@ -76,25 +76,29 @@ During the live demo, John received an intermittent warning about transfer faili
 7.    Install packages.  If asked, reply *yes* to use a new directory.  This will install the package in your **Home** directory.
    
 ## Submit Batch  
-1.    Example in this directory
+1.    Example in this directory to run a linear regression using *lm()*.
+  A. [test_lm.sh](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/test_lm.sh): Unix shell script listing rquested HPC resources and filename of script to run.  
+  B. [run_on_hpc.R](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/run_on_hpc.R): R-script with code to load data, run model, and save results.  
+  C. [test_data.rds](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/test_data.rds): Example data to perform regression.  
+  D. [demo_script_lm.R](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/demo_script_lm.R): R-Script used to generate and save *test_data.rds*  
+2.    Open terminal  
+3.    Navigate to desired working directory.  
+4.    Submit the shell script using `sbatch test_lm.sh`  
+  
+::: {.callout-note icon=false}  
+### Reminder: Line break error    
+During the live demo, we received the following error when attempting to submit the shell script:  
+> [john.humphreys@ceres fadru_fmd]$ sbatch test_lm.sh    
+> sbatch: error: Batch script contains DOS line breaks (\r\n)    
+    
+To resolve this issue, we used `dos2unix`   
+> [john.humphreys@ceres fadru_fmd]$ dos2unix test_lm.sh  
+> dos2unix: converting file test_lm.sh to Unix format...  
+  
+The sbatch was then succesful: 
+> [john.humphreys@ceres fadru_fmd]$ sbatch test_lm.sh  
+> Submitted batch job 12937586  
+::::
+
      
-
-
-
-
-# Module Spider
-module spider r
-module spider load r
-module spider load r/
-
-
-# 
-dos2unix
-[john.humphreys@ceres fadru_fmd]$ sbatch test_lm.sh
-sbatch: error: Batch script contains DOS line breaks (\r\n)
-sbatch: error: instead of expected UNIX line breaks (\n).
-[john.humphreys@ceres fadru_fmd]$ dos2unix test_lm.sh
-dos2unix: converting file test_lm.sh to Unix format...
-[john.humphreys@ceres fadru_fmd]$ sbatch test_lm.sh
-Submitted batch job 12937586
 
