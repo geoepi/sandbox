@@ -1,0 +1,58 @@
+# function to extract PRISM data downloaded and organized by get_prism.txt file
+
+library(terra)
+library(dplyr)
+library(readr) 
+
+target_directory <- "/90daydata/flavivirus_geospatial/raw_sp_features"
+
+grid <- vect(paste0(target_directory, "/assets/grid/square_full_grid.shp"))
+
+folders_to_process <- c("tmin", "tmax", "tmean", "ppt")
+
+for(i in 1:length(folders_to_process)){
+  
+  target_folder <- folders_to_process[i]
+  
+  file_names <- list.files(path = paste0(target_directory, "/prism_climate","/", target_folder),       
+                           pattern="*.bil$", full.names=T, recursive=T) 
+                           
+  # Convert file paths to data frame                           
+  file_names_df <- data.frame(path=file_names)
+  file_names_df$is_prov = grepl("provisional", file_names_df$path)
+  file_names_df$date_seq <- sub(".*_([0-9]+)_bil\\.bil", "\\1", file_names_df$path)
+  file_names_df$year <- as.integer(substr(file_names_df$date_seq, 1, 4)) 
+  file_names_df$month <- as.integer(substr(file_names_df$date_seq, 5, 6)) 
+  
+  # create out_df with Grid_ID
+  tmp_df <- data.frame(Grid_ID=grid$Grid_ID)
+  
+  for(j in 1:nrow(file_names_df)){
+    
+    tmp_raster <- rast(file_names_df$path[j])  # Use j for indexing
+    
+    tmp_raster <- project(tmp_raster, crs(grid))
+    
+    # Extract values and add to grid
+    mean_values <- as.data.frame(
+		terra::extract(tmp_raster, grid, fun="mean", na.rm=TRUE)[,names(tmp_raster)]
+		)
+		
+    value_col_name <- paste(target_folder, file_names_df$year[j], file_names_df$month[j], sep="_") 
+	
+	colnames(mean_values) <- value_col_name
+    
+    # Combine mean_values with Grid_ID
+    tmp_df <- cbind(tmp_df, mean_values)
+    
+  }
+  
+  # Output files
+  write_csv(tmp_df, paste(target_directory, "prism_climate/grid_extraction", 
+                          paste0(target_folder, "_", Sys.Date(), ".csv"), sep="/"))
+  
+  write_csv(file_names_df, paste(target_directory, 
+                                 paste0("prism_climate/prism_path_lookup_", target_folder, "_", Sys.Date(), ".csv"), sep="/"))
+
+}
+

@@ -1,0 +1,598 @@
+---
+title: "Data Download and Preprocessing"
+format:
+  gfm: 
+    df-print: kable
+    code-fold: show
+    code-summary: "Hide code"
+    code-overflow: wrap
+    toc-title: Page Contents
+    toc: true
+    toc-depth: 2
+    toc-location: right
+    number-sections: false
+    html-math-method: katex
+    smooth-scroll: true
+editor: source
+editor_options: 
+  chunk_output_type: console
+---
+
+## Overview
+
+This script provides an overview of using R to download and preprocess several publicly available data sets. The focus is on accessing and wrangling spatial data. Supporting materials for this overview (batch scripts, functions, etc.) are located in the same directory as this file. To make R aware of this file's location, load the **here** package, which will help set relative file paths for the remainder of this overview.
+
+```{r}
+library(here)
+```
+
+## Setup Atlas HPC
+
+For large data, like climate data, it's often preferable to download directly to one of our available HPC's or long term data storage locations like Juno. This overview assumes that you have a SCINet account and are already familiar with project directory organization.
+
+Installing needed r-packages used for spatial analysis on an HPC can be challenging due the need for dependencies located outside of the r-environment. For example, r-packages such as **terra** require that the GDAL module be loaded before opening the r-session. Once r is open, then the *install.packages()* command must be pointed to the locations of needed dependencies.
+
+To install needed geospatial packages on your Atlas HPC account:        
+1. Login to Atlas. Terminal access is preferred from PowerShell or [OnDemand](https://www.hpc.msstate.edu/computing/atlas/ood.php)       
+2. Choose a directory to serve as temporary scratch space (*/home/* will work).    
+3. Copy the following files to your scratch space: A. *install_geo_packages.sh*  
+A. *install_geo_packages.txt*  
+4. From the command line, Submit the Batch (*sbatch*) script (*.sh*): **\$sbatch install_geo_packages.sh**
+
+This script will load several modules, open R/4.4, and then run *install_geo_packages.txt*. At the time of writing this document, earlier versions of R were unable to link needed modules. Once R is open, the *install_geo_packages.txt* script will install several R-packages needed to download and process data, if the packages were not previously installed.
+
+## Setup Local Machine
+
+If working from a local machine (aka, your laptop), the needed packages can be installed using a function in the **./R** folder of this directory.
+
+##### First, load a utlity function to read all files in **./R** (there all functions)
+
+```{r message=FALSE, warning=FALSE}
+source(here("./R/utilities.R"))
+```
+
+##### Second, load all functions in **./R** using the *source_dir*  function.
+
+```{r}
+source_dir("./R")
+```
+
+##### Third, use the *install_needed_packages()* function to install from CRAN.
+
+```{r warning=FALSE, message=FALSE}
+needed_packages <- c("terra", "raster", "prism", "tidyverse")
+
+install_needed_packages(needed_packages)
+```
+
+A function called *select()* is included in a couple different packages. The one in **dplyr** should take precedent.  Also, some of **dplyr**'s output is a bit too verbose for me, so we handle these items here:
+
+```{r}
+select <- dplyr::select # conflict with sp package loaded with raster
+options(dplyr.summarise.inform = FALSE) # turn off messages
+```
+
+## Read Spatial
+
+Read in project specific spatial data. These files are in the **./assets** folder.
+
+```{r}
+# study area county boundaries
+counties <- vect(here("assets/counties/south_counties.shp")) # study area data
+head(counties)
+
+# merge the counties into groups by STATE_NAME
+state_borders <- aggregate(counties, "STATE_NAME") # state boundaries for plotting
+
+# grid being used for analysis
+grid <- vect(here("assets/grid/square_full_grid.shp")) # study area grid
+head(grid)
+```
+
+## Read WNV Data
+
+Disease observations from WNV reports must be kept confidential. These are currently in a **./PII_data** folder that's in my R project directory but excluded from GitHub through use of the *.gitignore* file.
+
+```{r}
+wnv_data <- read_csv("PII_data/reduced_wnv.csv")
+head(wnv_data)
+
+# sum to year as a check
+wnv_data %>%
+  group_by(year) %>%
+  summarise(tot = sum(Total),
+            nn = sum(Count_nn),
+            n = sum(Count_n))
+```
+
+Quick visual check of spatial data.
+```{r fig.width=6, fig.height=6}
+plot(counties, col = "lightblue")
+plot(grid, border="red", add=TRUE)
+```
+
+## Calculate Proportions
+
+Calculate the 'intersection' or overlap between the spatial objects. The idea is to break up individual grid cells based on counties then determine what areal proportion within individual grid cells is from (overlaps) each county. These functions are from the **terra** package.
+
+```{r}
+# find overlap (aka, intersections).  
+intersections <- terra::intersect(counties, grid)
+
+# area of each intersection
+intersections$intersect_area <- expanse(intersections)
+
+# total area for each grid cell
+grid$total_cell_area <- expanse(grid)
+
+# add county total area to intersections data frame
+intersections <- merge(intersections, grid[, c("Grid_ID", "total_cell_area")], by = "Grid_ID")
+
+# proportion of each county within each grid cell
+intersections$prop_cell <- intersections$intersect_area / intersections$total_cell_area
+
+head(intersections)
+```
+
+### Verify proportions
+
+The sum of proportions for most of the grid cells should be close to 1.0. Not all will sum to 1.0 because some cells are in empty space outside counties (NA) and some are around the edges (partially NA).
+
+```{r fig.height=5, fig.width=5}
+sum_grids <- as.data.frame(intersections) %>%
+  group_by(Grid_ID) %>%
+  summarise(tot_prop = sum(prop_cell))
+
+hist(sum_grids$tot_prop) # looks OK
+```
+
+### Save Weights Table
+
+Saving a copy of the weights (proportions) so that above code doesn't need to be re-run every time.
+
+```{r}
+cell_weights_table <- as.data.frame(intersections) %>%
+  select(Grid_ID, prop_cell, fips, NAME, STATE_NAME) %>%
+  arrange(Grid_ID)
+
+head(cell_weights_table)
+
+# save a copy (v1 = version 1)
+# write.csv(cell_weights_table, here("assets/cell_weights_v1.csv"), row.names = FALSE)
+```
+
+### Yearly Replicate
+
+Iterate through all years in the WNV data and calculate the county proportion to assign to each year using the *cell_weights_table* created above.
+
+```{r warning=FALSE, message=FALSE}
+all_years <- unique(wnv_data$year)
+all_agg_to_cells <- data.frame()
+
+for(i in 1:length(all_years)){
+  
+  year_i <- all_years[i] # get iteration year
+  
+  wnv_i <- wnv_data %>% # filter WNV data to year
+    filter(year == year_i)
+  
+  weights_i <- cell_weights_table # make copy of weights table
+  
+  weights_i$year <- year_i # add year to data frame
+  
+  weights_i$tot_cases <- with(wnv_i, # match year specific WNV data to weights by county
+                            Total[match(
+                              weights_i$fips,
+                                        fips)])
+  
+  weights_i$prop_cases <- weights_i$prop_cell*weights_i$tot_cases # multiply by proportion of cell in county
+  
+  agg_to_cell <- weights_i %>% # sum up all sub-cell pieces to get total in cell
+    group_by(year, Grid_ID) %>%
+    summarise(prop_cases = sum(prop_cases)) 
+  
+  all_agg_to_cells <- rbind(all_agg_to_cells, agg_to_cell) # combine all iterative years
+}
+```
+
+Check years
+```{r}
+all_agg_to_cells %>%
+  group_by(year) %>%
+  summarise(tot = sum(prop_cases))
+```
+
+### Join to WNV_Data
+
+Checking that same *Grid_ID*s are in each data set and that there are no NA entries.
+```{r}
+# Merge data. Warning about multiple joins due to wnv_data having multiple years.  Grid_ID is same across years
+wnv_data <- left_join(wnv_data, cell_weights_table, by =c("fips"))
+
+# ensure same unique Grid_ID
+length(unique(cell_weights_table$Grid_ID)) == length(unique(wnv_data$Grid_ID))
+
+# any missing prop_cell?
+length(which(is.na(wnv_data$prop_cell)))
+```
+
+### Plot WNV Years
+
+Using the *plot_wnv_year()* function to check a couple results. This function is in the *./R* directory. This function is really slow due to converting from a spatVector (terra) to a Spatial (sp) object. Much room for improvement...
+```{r fig.height=7, fig.width=6}
+plot_wnv_year(grid=grid, plot_data=all_agg_to_cells, column = "prop_cases", plot_year=2012)
+
+plot_wnv_year(grid, all_agg_to_cells, "prop_cases", 2010)
+
+plot_wnv_year(grid, all_agg_to_cells, "prop_cases", 2019)
+
+plot_wnv_year(grid, all_agg_to_cells, "prop_cases", 2019)
+```
+
+## Get Census
+
+Census data is available from a few sources, including directly from the Census Bureau, but the text file available at https://seer.cancer.gov is pretty compact and easy to access.
+
+### Download Pop Data
+
+The *download_and_unzip()* function is used to download and unzip a file from a specified url.
+
+Data source: https://seer.cancer.gov/popdata/download.html\
+Data Dictionary for codes: https://seer.cancer.gov/popdata/popdic.html
+
+```{r eval=FALSE}
+file_url <- "https://seer.cancer.gov/popdata/yr1990_2022.19ages/us.1990_2022.19ages.adjusted.txt.gz"
+
+#dest_dir <- "/90daydata/flavivirus_geospatial/census/"
+dest_dir <- here("census")
+
+# Call the function
+download_and_unzip(file_url, dest_dir)
+```
+
+Read and clean the file for ease of interpretation. The data is pretty big, so it is thinned to be just total population for WNV years in the study. This can be changed to specify the population size for specific age groups (older humans tend to be more susceptible to WNV).
+
+```{r}
+# read file
+census_data <- read.csv(here("census/us.1990_2022.19ages.adjusted.txt"), header = FALSE, skip = 1)
+
+# break up concatenation
+census_data$year <- substr(census_data$V1, 1, 4)
+
+# filter to WNV data years
+census_data <- census_data %>% filter(year >= min(all_years))
+
+# state abbreviation
+census_data$state <- substr(census_data$V1, 5, 6)
+
+# filter to states in study
+census_data <- census_data %>% filter(state %in% c("MS", "AR", "OK", "LA", "TX", "KS"))
+
+# separate other attributes
+census_data$S.fips = substr(census_data$V1, 7, 8)
+census_data$C.fips = substr(census_data$V1, 9, 11)
+census_data$Geo = substr(census_data$V1, 12, 13)
+census_data$Race = substr(census_data$V1, 14, 14)
+census_data$Origin = substr(census_data$V1, 15, 15)
+census_data$Sex = substr(census_data$V1, 16, 16)
+census_data$Age = substr(census_data$V1, 17, 18)
+census_data$Pop = substr(census_data$V1, 19, 26)
+
+# don't need these
+census_data <- census_data %>% select(-V1, -Geo)
+
+# join state and county FIPS to match those in WNV data
+census_data$fips <- paste0(census_data$S.fips, census_data$C.fips)
+census_data$Pop <- as.integer(census_data$Pop)
+```
+
+### Check Totals  
+Arbitraility choosing TX for a closer look.  Google says TX current population is about 30 million.  
+```{r}
+total_pop <- as.data.frame(
+  census_data %>%
+  group_by(fips, year) %>%
+  summarise(hum_pop = sum(Pop))
+)
+
+# convert to integer to match wnv_data
+total_pop$fips <- as.integer(total_pop$fips)
+total_pop$year <- as.integer(total_pop$year)
+
+head(total_pop)
+
+# Check Texas
+
+tex_pop <- census_data %>%
+  mutate(state = substr(fips, 1, 2)) %>%
+  filter(state == 48) %>%
+  group_by(state, year) %>%
+  summarise(state_pop = sum(Pop))
+
+plot(tex_pop$year, tex_pop$state_pop/10^6)
+
+max(tex_pop$state_pop) # little over 30 million, seems close
+```
+
+### Add Population to wnv_data
+Add total human population to the WNV data.  
+```{r}
+wnv_data <- left_join(wnv_data, total_pop, by = c("fips","year"))
+
+range(wnv_data$hum_pop)
+
+length(which(is.na(wnv_data$hum_pop)))
+```
+  
+### Calculate Cell Pop
+Note in the above that population was matched by COUNTY and year, not GRID CELL and year.  This code will use estimated area weights to guess at the proportion of county-level population in each grid cell.
+```{r}
+wnv_data$cell_pop <- wnv_data$hum_pop*wnv_data$prop_cell
+```
+
+### Plot Cell Pop
+```{r fig.width=6, fig.height=10}
+plot_wnv_year(grid=grid, plot_data=wnv_data, column = "cell_pop", plot_year=2002, col_palette = "ocean")
+
+plot_wnv_year(grid=grid, plot_data=wnv_data, column = "cell_pop", plot_year=2019, col_palette = "ocean")
+```
+
+#### Save a copy of updated WNV data
+```{r}
+write.csv(wnv_data, here("PII_data/reduced_wnv_pop.csv"), row.names = FALSE)
+```
+
+## Get PRISM Climate 
+PRISM climate data (https://prism.oregonstate.edu/) is available in several formats and can be downloaded using the the R-**prism** package.  The example here uses the function *get_prism_monthlys()* to get monthly *tmean* or monthly mean temperature data for the whole U.S., but *get_prism_annual()* or *get_prism_dailys()* can also be used, see: https://cran.r-project.org/web/packages/prism/index.html.  
+  
+This is an example only, but data for mean, minimum, and maximum temperature as well as total precipitation has already been downloaded to the *90daydata* directory shown in the below code.  All months from 2002-2023 for these variables is there.  
+   
+The FULL download process can be re-run using the following steps:  
+1. Login to Atlas. Terminal access is preferred from PowerShell or [OnDemand](https://www.hpc.msstate.edu/computing/atlas/ood.php)   
+2. Choose a directory to serve as temporary scratch space (*/home/* will work).   
+3. Copy the following files to your scratch space:    
+  A. *get_prism_climate.sh*  
+  B. *get_prism_climate.txt*  
+4. From the command line, Submit the Batch (*sbatch*) script (*.sh*): **\$sbatch get_prism_climate.sh**  
+   
+The current target directory in *get_prism_climate.txt* is */90daydata/flavivirus_geospatial/raw_sp_features/prism_climate/*, be sure to change this if another location is preferred.      
+   
+#### Example Download   
+An example of how the function works.  See the *get_prism_climate.txt* script and the */90daydata/flavivirus_geospatial/raw_sp_features/prism_climate/* to see this process extended to all data sets.  
+```{r eval=FALSE}
+prism_set_dl_dir(here("assets/tmean")) # write data to the tmean folder in the assets directory
+
+# choose and download data
+get_prism_monthlys(type = 'tmean', # climate variable wanted, options: "ppt", "tmean", "tmin", "tmax"
+                   years = 2019, # years wanted, may be multiple 2002:2023
+                   mon = 6,  # months wanted, may be multiple 1:12
+                   keepZip = FALSE) # delete downloaded zip files
+
+```
+    
+### Plot CONUS data  
+What the full raster looks like.
+```{r fig.height=5, fig.width=8}
+# read the raster
+june_tmean <- rast(
+  here("assets/tmean/PRISM_tmean_stable_4kmM3_201906_bil/PRISM_tmean_stable_4kmM3_201906_bil.bil")
+)
+
+june_tmean # details
+plot(june_tmean) # quick peek
+```
+
+
+### Extract to Grid Cells   
+An example of how values can be extracted to grid locations.  **Note:** The "mean" function is used indicating to calculate the mean of all raster cells within the area defined by each grid cell.  This function may be changed to min or max.      
+```{r}
+june_tmean.prj <- project(june_tmean, crs(grid))
+
+grid$tmean <- terra::extract(june_tmean.prj, grid, fun="mean", na.rm=TRUE)[,"PRISM_tmean_stable_4kmM3_201906_bil"]
+```
+
+#### Replace NaN entries with NA  
+NA entries are more easily recognized by other functions.  
+```{r}
+range(grid$tmean)
+
+grid$tmean[is.nan(grid$tmean)] <- NA
+
+range(grid$tmean)
+range(grid$tmean, na.rm=TRUE)
+```
+
+
+#### Plot tmean by grid cell  
+A plot showing the "mean" of all mean temperature cells (tmean) in each grid cell.  
+```{r fig.width=6, fig.height=10}
+plot_prism(grid=grid, plot_data=as.data.frame(grid), column = "tmean", col_palette = "ocean")
+```
+
+
+### Extract All PRISM to Grid  
+Given the example raster extraction shown above, we next want to loop through all monthly rasters, for all years, and all variables.   
+   
+Example code is shown below as an example of the process, but to avoid saving the data locally, the real extractions were performed using a batch script (the data has already been extracted).
+
+The extraction process can be re-run using the following steps:    
+1. Login to Atlas. Terminal access is preferred from PowerShell or [OnDemand](https://www.hpc.msstate.edu/computing/atlas/ood.php)   
+2. Choose a directory to serve as temporary scratch space (*/home/* will work).   
+3. Copy the following files to your scratch space:    
+  A. *extract_prism.sh*  
+  B. *extract_prism.txt*  
+4. From the command line, Submit the Batch (*sbatch*) script (*.sh*): **\$sbatch extract_prism.sh**     
+   
+Here is the basic steps the batch job will perform:     
+```{r eval=FALSE}
+# main directory
+target_directory <- "/90daydata/flavivirus_geospatial/raw_sp_features"
+   
+# spatial spatVect to define grid cells
+grid <- vect(paste0(target_directory, "/assets/grid/square_full_grid.shp"))
+  
+# PRISM variables to extract
+folders_to_process <- c("tmin", "tmax", "tmean", "ppt")
+
+# loop through each PRISM variable
+for(i in 1:length(folders_to_process)){
+  
+  # folder with variable raster files
+  target_folder <- folders_to_process[i]
+    
+  # get all files names   
+  file_names <- list.files(path = paste0(target_directory, "/prism_climate","/", target_folder),       
+                           pattern="*.bil$", full.names=T, recursive=T) 
+                           
+  # Convert file paths to data frame, creating a lookup table with metadata                           
+  file_names_df <- data.frame(path=file_names)
+  file_names_df$is_prov = grepl("provisional", file_names_df$path)
+  file_names_df$date_seq <- sub(".*_([0-9]+)_bil\\.bil", "\\1", file_names_df$path)
+  file_names_df$year <- as.integer(substr(file_names_df$date_seq, 1, 4)) 
+  file_names_df$month <- as.integer(substr(file_names_df$date_seq, 5, 6)) 
+  
+  # create out_df with Grid_ID
+  tmp_df <- data.frame(Grid_ID=grid$Grid_ID)
+  
+  for(j in 1:nrow(file_names_df)){
+    
+    tmp_raster <- rast(file_names_df$path[j])  # load a rasters one at a time
+    
+    tmp_raster <- project(tmp_raster, crs(grid)) # geographic conversion to grid projection
+    
+    # Extract values 
+    mean_values <- as.data.frame(
+      terra::extract(tmp_raster, grid, fun="mean", na.rm=TRUE)[,names(tmp_raster)]
+    )
+    
+    value_col_name <- paste(target_folder, file_names_df$year[j], file_names_df$month[j], sep="_") 
+	  colnames(mean_values) <- value_col_name
+    
+    # Combine mean_values with Grid_ID
+    tmp_df <- cbind(tmp_df, mean_values)
+    
+  }
+  
+  # extracted data
+  write_csv(tmp_df, paste(target_directory, "prism_climate/grid_extraction", 
+                          paste0(target_folder, "_", Sys.Date(), ".csv"), sep="/"))
+  
+  # copy of lookup table for reference
+  write_csv(file_names_df, paste(target_directory, 
+                                 paste0("prism_climate/prism_path_lookup_", 
+                                        target_folder, "_", Sys.Date(), ".csv"), sep="/"))
+
+}
+```
+
+
+## Get Land Cover  
+There are several sources of land cover data available.  The National Land Cover Database [NLCD](https://www.usgs.gov/centers/eros/science/national-land-cover-database) is probably the most popular, however, I recommend using the [EarthEnvironment](https://www.earthenv.org/) data available from the Jetz lab at Cornell.  The main benefit is that the 1x1km raster cells report the proportion of each land cover type.  Because proportions are continuous values (though censored) they are easier to work with than the discrete classes given in the NLCD.  
+   
+#### Download Global 1-km Consensus Land Cover   
+The links to the data are numbered sequentially 1-12 indicating 12 different land cover classes.  
+  
+There's a text file in the repo that has the names:
+```{r}
+EarthEnv_tab <- read_csv(here("assets/EarthEnv_labels.csv"))
+EarthEnv_tab
+```
+  
+Because there are only 12 of these rasters, the *download_and_unzip()* can be applied in a loop to download the files. 
+source: https://www.earthenv.org/landcover
+```{r eval=FALSE}  
+target_directory <- "/90daydata/flavivirus_geospatial/raw_sp_features/earth_env/"
+
+concen_landcover_web <- "http://data.earthenv.org/consensus_landcover/with_DISCover/"
+
+for(i in 1:12){
+  
+  tmp_name <- paste0("consensus_full_class_", i,".tif") 
+  
+  dl_path <- paste0(concen_landcover_web, tmp_name)
+  
+  download_file(dl_path, paste0(target_directory, tmp_name))
+  
+}
+```
+
+## Get Habitat Heterogeneity  
+The Earth Environment site has several other data sets that might be informative.  For example, [Global Habitat Heterogeneity](https://www.earthenv.org/texture) includes 14 metrics quantifying spatial heterogeneity of global habitat at multiple resolutions based on the textural features of Enhanced Vegetation Index (EVI) imagery acquired by MODIS.  
+  
+These metrics are derived from satellite vegetation data and are another way of getting at land use variation to supplement the consensus land cover downloaded above.  In addition to providing physical habitat, plants play a major role in regulating land surface temperature and humidity which influence arthropod distribution and abundance.  For example, an urban heat island devoid of vegetation vs. a dense tree forest vs. open grasslands.  
+  
+There's a text file in the repo that has the names:  
+```{r}
+HabHetero_tab <- read_csv(here("assets/habitat_heterog_labels.csv"))
+HabHetero_tab
+```
+   
+#### Get the data  
+Downloading the 1x1km version of all 14 variables.  
+     
+source: https://www.earthenv.org/texture
+```{r eval=FALSE}  
+target_directory <- "/90daydata/flavivirus_geospatial/raw_sp_features/habitat_hetero/"
+
+habitat_hetero_web <- "http://data.earthenv.org/habitat_heterogeneity/1km/"
+
+# variable names
+habitat_mets <- c("cv", "evenness", "range", "shannon", "simpson", "std", "Contrast", "Correlation",
+                  "Dissimilarity", "Entropy", "Homogeneity", "Maximum", "Uniformity", "Variance")
+
+for(i in 1:length(habitat_mets)){
+  
+  if(habitat_mets[i] %in% c("Contrast", "Dissimilarity", "Variance")){
+    end_string = "_01_05_1km_uint32.tif"
+    } else{
+      end_string = "_01_05_1km_uint16.tif"
+    }
+  
+  if(habitat_mets[i] == "Correlation"){
+     end_string = "_01_05_1km_int16.tif"
+  }
+  
+  tmp_name <- paste0(habitat_mets[i], end_string) 
+  
+  dl_path <- paste0(habitat_hetero_web, tmp_name)
+  
+  download_file(dl_path, paste0(target_directory, tmp_name))
+  
+}
+```
+
+
+## Get Elevation and Topographic  
+Earth Environment has a bunch of elevation and top variables available.
+
+#### Grab Topo
+source: https://www.earthenv.org/topography
+```{r eval=FALSE}
+target_directory <- "/90daydata/flavivirus_geospatial/raw_sp_features/elevation_topo/"
+
+elev_topo_web <- "data.earthenv.org/topography/"
+
+# variable names
+elev_derivs <- c("elevation", "slope", "aspectcosine", "aspectsine", "roughness", 
+                 "tpi", "tri", "vrm", "pcurv", "tcurv")
+
+for(i in 1:length(elev_derivs)){
+  
+  tmp_name <- paste0(elev_derivs[i], "_1KMmd_GMTEDmd.tif") 
+  
+  dl_path <- paste0(elev_topo_web, tmp_name)
+  
+  download_file(dl_path, paste0(target_directory, tmp_name))
+  
+}
+```
+
+
+####  More to come....
+
+
+
+
+
+
+

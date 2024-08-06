@@ -1,0 +1,15 @@
+Metric,Measure,Value Range,Expected Relationship with Heterogeneity
+Coefficient of variation,Normalized dispersion of EVI,>=0,Positive
+Evenness,Evenness of EVI,>=0; <=1,Positive
+Range,Range of EVI,>=0,Positive
+Shannon,Diversity of EVI,>=0; <=ln(max # of different EVI),Positive
+Simpson,Diversity of EVI,>=0; <=1-1/(max # of different EVI),Positive
+Standard deviation,Dispersion of EVI,>=0,Positive
+Contrast,Exponentially weighted difference in EVI between adjacent pixels,>=0,Positive
+Correlation,Linear dependency of EVI on adjacent pixels,>=-1; <=1,Nonlinear
+Dissimilarity,Difference in EVI between adjacent pixels,>=0,Positive
+Entropy,Disorderliness of EVI,>=0,Positive
+Homogeneity,Similarity of EVI between adjacent pixels,>=0; <=1,Negative
+Maximum,Dominance of EVI combinations between adjacent pixels,>=0; <=1,Negative
+Uniformity,Orderliness of EVI,>=0; <=1,Negative
+Variance,Dispersion of EVI combinations between adjacent pixels,>=0,Positive

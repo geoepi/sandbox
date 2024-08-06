@@ -1,0 +1,40 @@
+# this code will install needed geospatial r-packages and a few other important ones for preprocessing raw data.
+# the geospatial packages need to be pointed to where dependent modules are located on Atlas HPC
+
+install_geo_packages <- function() {
+  required_packages <- c("terra", "raster", "prism")
+  
+  for (pkg in required_packages) {
+    if (!require(pkg, character.only = TRUE)) { 
+      install_string <- paste("install.packages('", pkg, 
+                              "', configure.args='--with-proj-lib=$PROJ_ROOT/lib64 --with-proj-include=$PROJ_ROOT/include --with-sqlite3-lib=$SQLITE_ROOT/lib ')",
+                              sep = "")
+      message(paste("Installing package:", pkg))
+      eval(parse(text=install_string))
+    } else {
+      message(paste("Package", pkg, "is already installed."))
+    }
+  }
+}
+
+# run the function
+install_geo_packages()
+
+# a few others that will be useful
+
+install_needed_packages <- function(packages) {
+  for (pkg in packages) {
+    if (!require(pkg, character.only = TRUE)) {
+      message(paste("Installing package:", pkg))
+      install.packages(pkg)
+    } else {
+      message(paste("Package", pkg, "is already installed."))
+    }
+  }
+}
+
+# needed packages
+needed_packages <- c("tidyverse", "here")
+
+# run the function
+install_needed_packages(needed_packages)

@@ -1,0 +1,64 @@
+# open libraries
+library(prism) # retrieve PRISM climate data: https://prism.oregonstate.edu/
+
+create_folders_in_target <- function(folders, target_path) {
+  for (folder in folders) {
+    # get full paths 	
+    folder_path <- file.path(target_path, folder)
+    
+    # check if folders already exist
+    if (!dir.exists(folder_path)) {
+	
+      # id don't exist, create em
+      dir.create(folder_path)
+      cat(sprintf("Folder '%s' created in '%s'.\n", folder, target_path))
+    } else {
+      cat(sprintf("Folder '%s' already exists in '%s'.\n", folder, target_path))
+    }
+  }
+}
+
+# folders to create
+folders <- c("ppt", "tmax", "tmean", "tmin")
+
+# target directory path
+target_directory <- "/90daydata/flavivirus_geospatial/raw_sp_features/prism_climate/"
+
+# Run the function
+create_folders_in_target(folders, target_directory)
+
+
+
+# set directory to put files
+prism_set_dl_dir(file.path(target_directory, "tmean")) # write data to the tmean folder in the here() directory
+
+# choose and download data
+get_prism_monthlys(type = 'tmean', # climate variable wanted, options: "ppt", "tmean", "tmin", "tmax"
+                   years = 2002:2023, # years wanted
+                   mon = 1:12,  # months wanted
+                   keepZip = FALSE) # delete downloaded zip files
+				   
+				   
+# Note: can also use get_prism_annual() or get_prism_dailys(), see: https://cran.r-project.org/web/packages/prism/index.html  
+				   
+				   
+# same as above but get "tmax"
+prism_set_dl_dir(file.path(target_directory, "tmax"))
+get_prism_monthlys(type = 'tmax', 
+					years = 2002:2023, 
+					mon = 1:12,  
+					keepZip = FALSE)
+					
+# get "tmin"
+prism_set_dl_dir(file.path(target_directory, "tmin"))
+get_prism_monthlys(type = 'tmin', 
+					years = 2002:2023, 
+					mon = 1:12,  
+					keepZip = FALSE)
+					
+# get "ppt"
+prism_set_dl_dir(file.path(target_directory, "ppt")) # total precipitation
+get_prism_monthlys(type = 'ppt', 
+					years = 2002:2023, 
+					mon = 1:12,  
+					keepZip = FALSE)
