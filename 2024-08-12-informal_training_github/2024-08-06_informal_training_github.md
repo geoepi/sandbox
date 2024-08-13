@@ -85,9 +85,8 @@ Next, let’s step through cloning with GH Desktop. (demo)
 
 ## Adding Content
 
-Before talking about project management, what *should* go into a repo,
-we’ll first look at how to add files technically/generally and get them
-to GitHub.
+Before talking about what *should* go into a repo, we’ll first look at
+how to add files technically/generally and get them to GitHub.
 
 Repo files can be added and managed in a number of ways, including from
 the CLI.
@@ -105,6 +104,22 @@ to GitHub online.
 
 All files added to the repo are automatically tracked by the GUI, let’s
 take a look at that method. (demo)
+
+### Needed Repo Stuff
+
+Here’s a list of a few standard items to have in the repo: [GH Repo
+Components](https://geoepi.github.io/Notebook/repo_components.html)
+
+Personal Access Tokens (PAT), APIs, and other secret things…
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
+usethis::create_github_token()
+```
+
+</details>
 
 ## Create an R-Project
 
