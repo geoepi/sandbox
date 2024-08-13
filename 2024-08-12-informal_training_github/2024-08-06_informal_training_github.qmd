@@ -98,16 +98,17 @@ usethis::create_github_token()
 ```
    
       
-## RStudio and R-Project  
+## RStudio, R-Project, and Git    
 A main benefit of integrating git and RStudio isn't to have another option for linking to Git, rather it's to efficiently use git as part of normal coding.  
   
-
-
+1.    Create an R-Project (in the repo folder, same name as repo)  
+2.    Build a project (add content)  
+3.    Commit and push to GitHub  
   
-::: {.callout-warning icon=false}  
-### Note 
-During the live demo, 
-:::
-  
-
-
+Collaborate:  
+1.    Branching  
+2.    Pull Requests (PRs)  
+3.    Code review  
+4.    Merge  
+   
+     
