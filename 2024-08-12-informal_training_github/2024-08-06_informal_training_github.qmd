@@ -15,91 +15,81 @@ editor_options:
   chunk_output_type: console
 ---  
   
-## Linked Resources   
+## Linked Resources  
+   
+#### What's Needed  
+1.    Download and install [RStudio](https://www.r-project.org/) and [GitHub Desktop](https://desktop.github.com/download/).  Git is a command line application, GH Desktop is a GUI for Git, and GitHub is a web service.  Git is installed with the Desktop app.   
+    
+2.    Create GitHub user account @ https://github.com/     
   
+3.    A few R-packages need to be installed, including, the **here** package for directory management, the **usethis**package for authenticating to GitHub, and the ...   
+    
 #### GeoEpi Notebook
-Similiar Info Here: https://geoepi.github.io/Notebook/proj_management.html 
-
-#### SCINet Access Info  
-Access Info: https://scinet.usda.gov/guides/access/web-based-login
-
-#### Access ATLAS  
-Link: https://atlas-ood.hpc.msstate.edu/
-
-#### Access CERES  
-Link: http://ceres-ood.scinet.usda.gov/
-
-#### Globus File Transfer   
-Link: https://www.globus.org/
-
-
-## Discussion Topics  
+[GitHub Elements](https://geoepi.github.io/Notebook/github_elements.html): A checklist of basic GitHub skills to know.  
   
-### Login and Directories   
-1.    Login to OnDemand (try both Atlas and Ceres)  
-  A. Use of PIV card now preferred, but ssh from PowerShell possible  
-  B. Note: Tabs across top of page to access interactive GUI`s, Files, and terminals.  
-2.    `Files` tab: Navigable directory via web interface  
-  A. Find, create, and create directories    
-  B. `Upload` and `Download` options (click, drag, and drop style)    
-  C. Web interface good for smaller data, Globus recommended for big data    
-3.    Where to save, keep, and archive data?    
-  A. **Home** directory: Very small storage, good for individual software installs    
-  B. **Project** directories: Project-specific, look at *flavivirus_geospatial* and *fadru_fmd* projects as examples.    
-    i. Same project names used on Ceres, Atlas, and Juno  
-    ii. Size determined by P.I.'s, may be increased as needed    
-    iii. This is where computational work is performed    
-  C. **90daydata** directory: includes a project-specific directory *unlimited* storage, but deleted after 90days of being idle.    
-    i. Best place for staging big data prior to prepossessing    
-    ii. Pull it into the **Project** directory as needed.    
-  D. **Juno** directory: Long-term data archiving.  Typically used when project is complete to create enduring data record.    
+[GH Repo Components](https://geoepi.github.io/Notebook/repo_components.html): Core structure, files, and directories suggested for a GitHub repository, aka a *Repo*.  
   
+
+## Initial Setup      
+Tell RStudio where Git lives:    
+  A. Open RStudio 
+  B. Go to the `Terminal` CLI  
+  C. Find git: Type `which git` or `git --version`    
+  D. Navigate to Tools > Global Options > Git/SVN  
+    i. Ensure Git's linked there (`\Program Files\Git\bin\git.exe`)   
+  E. May need to restart RStudio   
+    
+**Authentication** is the porcess of letting GitHub know who you are.  This can be done using *use_git_config()* from the **usethis** package to configure your the username and email.  Use your GitHub account username and email.   
+   
+For example:     
+```{r eval=FALSE}
+library(usethis)
+use_git_config(user.name = "JohnH", user.email = "jmh09@my.fsu.edu")
+```
   
-### Globus    
-1.    See recoomendations on SCINet here [Scinet: Globus](https://scinet.usda.gov/guides/data/datatransfer)   
-2.    Use of ORCID suggested for credentials and authentication.  
-3.    Search for Ceres and Atlas in the `Collection` box, use `SCINet-Atlas` and `SCINet-Ceres`  
-4.    Open side-by-side windows to view files between HPCs, or between HPCs and your local machine.  
-5.    Select files, click `Start ->` arrow button to transfer  
+## Create a Repo  
+Usually simplest to create it at the website first, then *clone* using the Desktop GUI or command line.  Though, you can create repos on your local machine before (or without ever) sending them to GitHub (see, `git init` [here](https://git-scm.com/docs/git-init)).  
+  
+1.    Navigate to GitHub and create a repo for practice. (demo)  
+2.    Next, copy the new repo to your local machine, that is, *clone* the repo.  
+  
+To clone from the terminal:
+```
+cd C:\Users\humph173\Documents\aa_training
+mkdir project_one
+cd project_one
+git clone https://github.com/JMHumphreys/test_repo.git
+cd test_repo
+```
+
+Next, let's step through cloning with GH Desktop. (demo)  
+   
+## Adding Content  
+Before talking about project management, what *should* go into a repo, we'll first look at how to add files technically/generally and get them to GitHub.  
+   
+Repo files can be added and managed in a number of ways, including from the CLI.  
+  
+For example:  
+```
+git add myfile.R
+```
+Then, whatever is added to the directory with the `.git` can be *pushed* to GitHub online.  
+```
+git status
+git commit -m "initial commit"
+git push
+```
+  
+All files added to the repo are automatically tracked by the GUI, let's take a look at that method. (demo)  
+  
+## Create an R-Project  
+
+
   
 ::: {.callout-warning icon=false}  
-### Atlas Authentication Error  
-During the live demo, John received an intermittent warning about transfer failing due to unsuccessful authentication to Atlas.  If you encounter a similar issue, go to the settings->Identity options on Globus and ensure that you do not have a red "X" next to your credentials.  If you do, copy your identity information (ID code and username) and send it to SCINet support so that your authentication info can be updated.  This fixed John's issue.
+### Note 
+During the live demo, 
 :::
   
-## Terminal (command line)  
-1.    Open terminals  
-2.    Navigate and create directories  
-3.    Scroll through installed software `module spider`  
-4.    Find available R versions `module spider r`  
-5.    Choose and R version `module spider r/4.4.0`  
-6.    Load module `module load r/4.4.0` then open R using `R`  
-7.    Install packages.  If asked, reply *yes* to use a new directory.  This will install the package in your **Home** directory.
-   
-## Submit Batch  
-1.    Example in this directory to run a linear regression using *lm()*.
-  A. [test_lm.sh](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/test_lm.sh): Unix shell script listing rquested HPC resources and filename of script to run.  
-  B. [run_on_hpc.R](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/run_on_hpc.R): R-script with code to load data, run model, and save results.  
-  C. [test_data.rds](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/test_data.rds): Example data to perform regression.  
-  D. [demo_script_lm.R](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/demo_script_lm.R): R-Script used to generate and save *test_data.rds*  
-2.    Open terminal  
-3.    Navigate to desired working directory.  
-4.    Submit the shell script using `sbatch test_lm.sh`  
-  
-::: {.callout-note icon=false}  
-### Reminder: Line break error    
-During the live demo, we received the following error when attempting to submit the shell script:  
-> [john.humphreys@ceres fadru_fmd]$ sbatch test_lm.sh    
-> sbatch: error: Batch script contains DOS line breaks (\r\n)    
-    
-To resolve this issue, we used `dos2unix`   
-> [john.humphreys@ceres fadru_fmd]$ dos2unix test_lm.sh  
-> dos2unix: converting file test_lm.sh to Unix format...  
-  
-The sbatch was then succesful: 
-> [john.humphreys@ceres fadru_fmd]$ sbatch test_lm.sh  
-> Submitted batch job 12937586  
-::::
 
-     
 
