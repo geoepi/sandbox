@@ -1,14 +1,11 @@
-Informal Github Training
-================
-8/12/24
+# Informal Github Training
+2024-08-12
 
-- <a href="#linked-resources" id="toc-linked-resources">Linked
-  Resources</a>
-- <a href="#initial-setup" id="toc-initial-setup">Initial Setup</a>
-- <a href="#create-a-repo" id="toc-create-a-repo">Create a Repo</a>
-- <a href="#adding-content" id="toc-adding-content">Adding Content</a>
-- <a href="#create-an-r-project" id="toc-create-an-r-project">Create an
-  R-Project</a>
+- [Linked Resources](#linked-resources)
+- [Initial Setup](#initial-setup)
+- [Create a Repo](#create-a-repo)
+- [Adding Content](#adding-content)
+- [RStudio, R-Project, and Git](#rstudio-r-project-and-git)
 
 ## Linked Resources
 
@@ -54,7 +51,7 @@ username and email.
 For example:
 
 <details open>
-<summary>Hide code</summary>
+<summary>Code</summary>
 
 ``` r
 library(usethis)
@@ -103,6 +100,10 @@ to GitHub online.
     git commit -m "initial commit"
     git push
 
+Outside of RStudio Terminal, CLI can be performed for any git
+directory. 1. Navigate to the new repo  
+2. Right click, `Open git here`
+
 All files added to the repo are automatically tracked by the GUI, let’s
 take a look at that method. (demo)
 
@@ -114,7 +115,7 @@ Components](https://geoepi.github.io/Notebook/repo_components.html)
 Personal Access Tokens (PAT), APIs, and other secret things…
 
 <details open>
-<summary>Hide code</summary>
+<summary>Code</summary>
 
 ``` r
 usethis::create_github_token()
@@ -122,12 +123,18 @@ usethis::create_github_token()
 
 </details>
 
-## Create an R-Project
+## RStudio, R-Project, and Git
 
-<div>
+A main benefit of integrating git and RStudio isn’t to have another
+option for linking to Git, rather it’s to efficiently use git as part of
+normal coding.
 
-> **Note**
->
-> During the live demo,
+1.  Create an R-Project (in the repo folder, same name as repo)  
+2.  Build a project (add content)  
+3.  Commit and push to GitHub
 
-</div>
+Collaborate:  
+1. Branching  
+2. Pull Requests (PRs)  
+3. Code review  
+4. Merge
