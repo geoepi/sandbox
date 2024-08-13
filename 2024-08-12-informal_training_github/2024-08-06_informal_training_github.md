@@ -39,7 +39,8 @@ repository, aka a *Repo*.
 ## Initial Setup
 
 Tell RStudio where Git lives:  
-A. Open RStudio B. Go to the `Terminal` CLI  
+A. Open RStudio  
+B. Go to the `Terminal` CLI  
 C. Find git: Type `which git` or `git --version`  
 D. Navigate to Tools \> Global Options \> Git/SVN  
 i. Ensure Git’s linked there (`\Program Files\Git\bin\git.exe`)  
