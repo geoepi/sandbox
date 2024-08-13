@@ -32,12 +32,12 @@ editor_options:
 
 ## Initial Setup      
 Tell RStudio where Git lives:  
-A.    Open RStudio   
-B.    Go to the `Terminal` CLI    
-C.    Find git: Type `which git` or `git --version`      
-D.    Navigate to Tools > Global Options > Git/SVN    
-i.    Ensure Git's linked there (`\Program Files\Git\bin\git.exe`)     
-E.    May need to restart RStudio     
+1.    Open RStudio   
+2.    Go to the `Terminal` CLI    
+3.    Find git: Type `which git` or `git --version`      
+4.    Navigate to Tools > Global Options > Git/SVN    
+5.    Ensure Git's linked there (`\Program Files\Git\bin\git.exe`)     
+6.    May need to restart RStudio     
       
 **Authentication** is the porcess of letting GitHub know who you are.  This can be done using *use_git_config()* from the **usethis** package to configure your the username and email.  Use your GitHub account username and email.   
    
