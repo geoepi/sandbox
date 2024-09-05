@@ -1,0 +1,217 @@
+Google Earth Engine: Calculate and Export Annual NDVI
+================
+
+- <a href="#overview" id="toc-overview">Overview</a>
+- <a href="#ndvi-javascript" id="toc-ndvi-javascript">NDVI JavaScript</a>
+- <a href="#county-level-ndvi-extraction"
+  id="toc-county-level-ndvi-extraction">County-level NDVI Extraction</a>
+
+## Overview
+
+Although a wide variety of static data sets are accessible online, there
+is often a need to acquire **big data** sets with custom processing. In
+this case, big data refers to geospatial datathat is cumbersome to
+process locally (on a laptop) due to some combination of its large areal
+extent and high spatial resolution.
+
+[Google Earth Engine (GEE)](https://earthengine.google.com/) is a
+web-based integrated development environment (IDE) for the Earth Engine
+JavaScript API. It requires users to log in with a Google Account that
+has been granted Earth Engine access. The Code Editor is equipped with
+features that streamline development of complex geospatial workflows,
+making the process fast and efficient.
+
+## NDVI JavaScript
+
+The below GEE’s JavaScript API to interact with and process geospatial
+data, such as the MODIS NDVI dataset. The syntax for loading datasets,
+defining functions, and performing geospatial operations follows
+JavaScript standards, with GEE-specific objects like
+`ee.ImageCollection`, `ee.Date`, and `Export.image.toDrive()`.
+
+### Define a region of interest (roi):
+
+Here the variable *geometry* is the name for a bounding polygon. The
+below defined geographic area was first drawn by hand using GEE’s
+interactive tools, but it can also be specified using code only (as
+below).
+
+    var geometry = ee.Geometry.Polygon([
+      [
+        [-107.0575596647112, 25.04930513752117],  // first vertex
+        [-85.2606846647112, 25.04930513752117],   // second 
+        [-85.2606846647112, 40.61689587807561],   // third
+        [-107.0575596647112, 40.61689587807561],  // fourth
+        [-107.0575596647112, 25.04930513752117]   // closing, same as first vertex
+      ]
+    ]);
+
+### Annual loop:
+
+Then we loop through each year to pull the appropriate satellite data,
+from [MODIS/Terra](https://lpdaac.usgs.gov/products/mod13q1v006/) in
+this case. The code crops to the area defined by *geometry*, and then
+exports to the folder named **NDVI** on my GoogleDrive.
+
+    // load the MODIS NDVI dataset (MOD13Q1 is for NDVI data)
+    var dataset = ee.ImageCollection('MODIS/006/MOD13Q1')
+                    .filterBounds(geometry) // Filter by the region of interest
+                    .filterDate('2001-01-01', '2023-12-31'); // Filter for the extended time period
+
+    // calculate annual NDVI composites
+    var calculateAnnualNDVI = function(year) {
+      var startDate = ee.Date.fromYMD(year, 1, 1);
+      var endDate = ee.Date.fromYMD(year, 12, 31);
+      
+      // filter the dataset for the specific year
+      var ndviYear = dataset.filterDate(startDate, endDate)
+                            .select('NDVI'); // Select only the NDVI band
+      
+      // calculate the mean NDVI for the year
+      var annualNDVI = ndviYear.mean().clip(geometry);
+      
+      return annualNDVI.set('year', year)
+                       .set('system:time_start', startDate.millis());
+    };
+
+    // run the function to the years 2001 through 2023
+    var years = ee.List.sequence(2001, 2023); // Generate a sequence of years from 2001 to 2023
+    var annualNDVICollection = ee.ImageCollection(years.map(calculateAnnualNDVI));
+
+
+    // loop to export NDVI data for each year from 2001 to 2023
+    years.getInfo().forEach(function(year) {
+      var image = annualNDVICollection.filter(ee.Filter.eq('year', year)).first();
+      
+      Export.image.toDrive({
+        image: image,
+        description: 'Annual_NDVI_' + year,
+        scale: 500, // Set the spatial resolution
+        region: geometry,
+        maxPixels: 1e13,
+        folder: 'NDVI' // Specify the folder name in Google Drive
+      });
+    });
+
+To provide an example of the result, the cropped annual NDVI grid for
+2014 has been copied to the `/assets` folder in the working directory.
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
+library(here)     # directory management
+library(terra)    # spatial data
+library(ggplot2)  # plotting
+library(sf)       # to convert to a ggplot-compatible format
+  
+ndvi_2014 <- rast(here("assets/NDVI/Annual_NDVI_2014.tif"))
+
+# get study area boundaries (counties) 
+counties <- vect(here("assets/counties/south_counties.shp"))  
+
+# project counties to match the grid
+counties <- project(counties, crs(ndvi_2014))
+```
+
+</details>
+<details open>
+<summary>Hide code</summary>
+
+``` r
+# get data for plotting
+ndvi_df <- as.data.frame(ndvi_2014, xy = TRUE, na.rm = TRUE)
+ 
+# convert to ggplot compatable format
+counties_sf <- st_as_sf(counties)
+  
+# plot data
+ggplot() +
+  geom_raster(data = ndvi_df, aes(x = x, y = y, fill = NDVI)) +
+  geom_sf(data = counties_sf, fill = NA, color = "white", size = 0.5) +
+  scale_fill_viridis_c(name = "NDVI") +
+  labs(title = "2014 NDVI",
+       x = "Longitude", y = "Latitude") +
+  theme_minimal() +
+  theme_minimal() + 
+    theme(plot.margin = unit(c(1, 0.5, 1, 0.5), "cm"),
+          legend.direction = "horizontal",
+          legend.position = "bottom", 
+          strip.text = element_text(size = 26, face = "bold"),
+          strip.background = element_blank(),
+          legend.key.size = unit(1, "line"),
+          legend.key.width = unit(3, "line"),
+          legend.text = element_text(size = 16, face = "bold"),
+          legend.title = element_text(size = 18, face = "bold"),
+          axis.title.x = element_text(size = 24, face = "bold"),
+          axis.title.y = element_text(size = 24, face = "bold"),
+          axis.text.x = element_text(face = "bold", size = 12, vjust = 1, 
+                                     hjust = 1, angle = 45),
+          axis.text.y = element_text(size = 12, face = "bold"),
+          plot.title = element_text(size = 26, face = "bold", hjust = 0.5))
+```
+
+</details>
+
+![](google_earth_engine_ndvi_files/figure-commonmark/unnamed-chunk-2-1.png)
+
+## County-level NDVI Extraction
+
+Once the spatial NDVI grids have been relocated to the HPC, county-level
+statistics can be extracted using the same techniques described in the
+[extract_to_counties](https://github.com/geoepi/GeoAI-Flavivirus2/blob/main/features_preprocessing/extract_to_counties.md)
+script.
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
+library(terra)
+library(dplyr)
+library(readr)
+library(stringr) 
+  
+# main directory
+target_directory <- "/90daydata/flavivirus_geospatial/raw_sp_features"
+   
+# spatial spatVect to define grid cells
+counties <- vect(paste0(target_directory, "/assets/counties/south_counties.shp"))
+
+# get file names
+file_names <- list.files(path = paste0(target_directory, "/NDVI"),
+                         pattern="*.tif$", full.names=T, recursive=T) 
+# organize file names
+file_names_df <- data.frame(path=file_names)
+
+# get label for column name
+file_names_df$year <- paste("Year_", str_extract(
+  file_names_df$path, "(?<=_)\\d+(?=\\.tif)"), sep="")
+
+# data frame of fips code ordered same as in counties
+tmp_df <- data.frame(fips=counties$fips)
+
+# loop through each grid
+for(i in 1:nrow(file_names_df)){
+  
+    tmp_raster <- rast(file_names_df$path[i])  # load one raster at a time
+    
+    counties <- project(counties, crs(tmp_raster)) # conversion to match projection
+    
+    # Extract values 
+    mean_values <- as.data.frame(
+      terra::extract(tmp_raster, counties, fun="mean", na.rm=TRUE)[,names(tmp_raster)]
+    )
+    
+      colnames(mean_values) <- file_names_df$year[i]
+    
+    # Combine mean_values with Grid_ID
+    tmp_df <- cbind(tmp_df, mean_values)
+    
+  }
+  
+  # extracted data
+  write_csv(tmp_df, paste("/project/flavivirus_geospatial/feature_extract/", 
+                           "ndvi_", Sys.Date(), ".csv", sep=""))
+```
+
+</details>
