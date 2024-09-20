@@ -1,0 +1,130 @@
+---
+title: "Importing FLAPS Data from OSF"
+description: "Farm Location and Agricultural Production Simulator"
+format: 
+   gfm:
+     toc: true
+     toc-depth: 2
+     code-fold: show
+     code-summary: "Hide code"
+     preview-mode: raw
+editor_options: 
+  chunk_output_type: console
+---
+
+## Overview  
+This script demonstrates how to download and view FLAPS data stored on the Open Science Framework (OSF).   
+
+## Setup
+
+### Libraries  
+Except for the **osfr** package specific to OSF and **rnaturalearth**, which includes geographic bondary files, these are pretty standard.  
+```{r, warning=FALSE, message=FALSE, echo=TRUE}
+library(here) # project directory management
+library(tidyverse) # all things tidy - ggplot
+library(tidyterra) # spatial tidy tools
+library(sf) # spatial data manipulation
+
+library(rnaturalearth) # used tget state boundaries
+library(osfr) # designed to help access OSF sites
+```
+
+### State Boundaries  
+Get geographic boundaries to visually check FLAPS data.  
+```{r}
+us_states <- ne_states(country = "United States of America", # polygons
+                       returnclass = "sf") # use sf package  
+
+contiguous_us <- us_states %>%# drop these states
+  filter(!name %in% c("Alaska", "Hawaii"))
+
+my_projection <- 5070 # NAD83 / Conus Albers / meters
+contiguous_us <- st_transform(contiguous_us, crs = my_projection) # project file from lat/long
+```  
+
+Quick plot  to check:
+```{r fig.width=8, fig.height=8}
+ggplot(data = contiguous_us) +
+  geom_sf() +
+  theme_minimal() +
+  labs(title = "State Boundaries") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)) +
+   coord_sf(crs = st_crs(my_projection))
+```
+
+## Get FLAPS  
+A bit tedious to get the identifiers needed for download, but the detail is useful in more complicated projects and workflows.  
+
+### Retrieve Metadata  
+Get FLAPS file metadata from the website, which is located here: https://osf.io/f9x4a/ Note the code at the end of the web address is used below. 
+```{r}
+files_in_flaps <- osf_retrieve_node("f9x4a") %>%  # website metadata
+  osf_ls_files() %>%                              # folder metadata
+  pull(id) %>%                                    # get folder ID
+  osf_retrieve_file() %>%                         # retrieve folder contents
+  osf_ls_files()                                  # list folder contents
+```
+
+The **id** code identifies the file
+```{r}
+files_in_flaps # full file metadata
+
+files_in_flaps$name # names of individual files
+
+files_in_flaps$id # ID numbers needed to pull files
+```
+
+### Download Select Files  
+Use the **id** numbers to select individual files.
+```{r}
+files_in_flaps$id[2] # select any file in list
+
+# download to destination path
+osf_retrieve_file(files_in_flaps$id[2]) %>% #use the id code to select files
+                osf_download(conflicts = "overwrite", # overwrite existing file
+                             path = here("2024-09-08-osf_geospatial")) # where to save
+```
+  
+### Download All Files  
+If all files are needed(~450mb), then they can be downloaded  at once using:
+```{r eval=FALSE}
+osf_download(files_in_flaps, 
+             path = here(), # where to save the files (project directory in this example)
+             conflicts = "overwrite") # overwrite existing
+```
+
+
+### Read File    
+The file should now be downloaded and accessible to R.  Id is a unique *farm* idnetfier, FIPS is the state-county code (Federal Information Processing Standard).  Beef is the head of beef cattle and dairy the number of dairy cows on the farm.  The premises classes b,d,f,m stand for *beef*, *dairy*, *feedlot*, and *market* respectively.  Little **xy** are the geographic coordinates.  
+```{r}
+flaps_data <- read_tsv(here("2024-09-08-osf_geospatial", files_in_flaps$name[2]))
+
+dim(flaps_data)[1] # number of farms 
+
+head(flaps_data)
+```
+
+### Spatial FLAPS  
+There is a lot of data, subsample the data before visualizing.
+```{r}
+small_flaps_data <- flaps_data %>% # random sample
+  sample_n(size = 3000)
+
+flaps_pnts <- st_as_sf(small_flaps_data, coords = c("x", "y"), crs = 5070)
+```
+
+### Map FLAPS 
+```{r fig.width=8, fig.height=8}
+ggplot(data = contiguous_us) +
+  geom_sf() +
+  geom_sf(data = flaps_pnts, color = "red", size = 2) +
+  theme_minimal() +
+  labs(title = "Simulated Farms (FLAPS)") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)) +
+   coord_sf(crs = st_crs(my_projection))
+```
+
+
+
