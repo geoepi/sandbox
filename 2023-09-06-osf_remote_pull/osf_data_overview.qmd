@@ -1,0 +1,159 @@
+---
+title: "Flavivirus Data Overview"
+description: "Access and summarize data from secure OSF site"
+format: 
+   gfm:
+     preview-mode: raw
+editor_options: 
+  chunk_output_type: console
+---
+
+## Overview
+This script provides a brief demonstration on how to import data directly from an Open Science Framework project website (OSF).  Generally it's best to use GitHub for code rather than data storage; OSF provides an inexpensive (free) and secure (duel authentication) location to store the data.   
+
+### Libraries  
+Load needed libraries.    
+    
+The heavy lifting is performed by the [**osfr package**](https://cran.r-project.org/web/packages/osfr/index.html), which is available on CRAN, but an equivalent Python version is available from [**osfclient**](https://github.com/osfclient/osfclient).  Other packages here are just used to display imported data.  
+```{r message=FALSE, warning=FALSE}
+library(osfr) # OSF package
+library(yaml) # yaml tools
+library(tidyverse) #data wrangling
+library(sf) #spatial data
+library(viridis) # color palette
+library(here) # directory management
+```
+
+
+### OSF Authentication  
+Because the flavivirus detection data is stored in a secure OSF directory, a *personal access token* (PAT) is needed to access, read, and write to the project remotely.  Once a PAT is generated from your OSF profile (see: https://docs.ropensci.org/osfr/articles/auth), it can be set as an environment variable and be recognized by *osfr*, the OSF R-package.   
+    
+This demo is being run from a GitHub repo where my personal PAT is stored in a *secrets.yml* file.    
+```{r}
+# Read the PAT (must) create your own secrets.yml and PAT, this is one of mine)
+my_osf_pat <- read_yaml(here("secrets.yml"))
+
+osf_auth(my_osf_pat$osf) #authenticate to OSF
+```
+
+### Read OSF Project  
+The WNV project data is located on OSF here: https://osf.io/6w7sf/ and the data is stored in the ``Disease Data`` component (sub directories are called ``components`` on OSF) of the main directory here: https://osf.io/r2z5k/    
+   
+**Note:**  You must have been granted access to the OSF project directories above for the hyperlinks to function properly.   
+       
+The last part of the data component's URL includes the GUID r2z5k, which is used to read the directory with the *osf_retrieve_node()* function.        
+```{r}
+wnv_project <- osf_retrieve_node("r2z5k") #Read the data  
+   
+#View the uploaded data files
+wnv_project %>%
+  osf_ls_files() #tibble with file names and formats (.sas7bat, .csv, .xlsx, etc)    
+```
+
+
+### Local Download  
+Download files to a local directory (**Warning:** If directory is within GitHub, ensure it is included on the *.gitignore* file to avoid posting/copying the data to the repo where other might access it)  
+```{r}
+#Copy the file names
+wnv_file_names <- wnv_project %>%
+                  osf_ls_files() 
+
+#In addition to data files, that counties_poly folder includes a US Census boundary file (ESRI shapefile) 
+
+#download all files to a 'local/data' directory
+osf_download(wnv_file_names, 
+             path = here("local/data"),
+             conflicts = "overwrite")
+```
+  
+This can also be done one file at a time, in a loop or function as needed.
+```{r}
+#Example: just download file 5
+wnv_file_names$name[5] # file name
+wnv_file_names$id[5] # file id code
+
+osf_retrieve_file(wnv_file_names$id[5]) %>% #use the id code to select files
+                osf_download(conflicts = "overwrite", path = here("local/data")) #overwrite previous file 
+```
+
+
+### Read Example Data  
+Reading the text file with human neuroinavsive West Nile Disease as an example.  
+```{r}
+neuro_invasive <- read_csv(here("local/data/human_neuroinvasive_wnv_2000-2021.csv"))
+
+head(neuro_invasive)
+
+range(neuro_invasive$year)
+```
+
+Quick bar plot
+```{r fig.height=5, fig.width=8}
+bar_plot <- neuro_invasive %>%
+  group_by(year) %>%
+  summarise(Total = sum(count, na.rm=T))
+
+ggplot(bar_plot, aes(year, Total)) +
+  geom_bar(stat="identity") +
+  xlab("Year") +
+  ylab("Total Cases") +
+  theme_bw()
+```
+
+
+
+### Get GeoBoundary File  
+This is an older, county-level shapefile (ESRI), updated ones are available here: https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html
+```{r fig.height=6, fig.width=6}
+counties = read_sf(here("local/data/counties_poly/counties.shp"))
+
+# Join 2-digit state code to 3-digit county code
+counties$STCO_FIPS <- paste0(counties$STATE, counties$COUNTY) 
+
+counties %>% 
+  ggplot() +
+  geom_sf() +
+  theme_bw()
+```
+
+Filter to only 2020, add data to boundary file by FIPS Code, and plot 
+```{r fig.height=6, fig.width=8}
+cases_2020 <- neuro_invasive %>%
+  filter(year == 2020) %>%  #filter data
+  group_by(fips, county, state) %>%
+  summarise(Count = sum(count))
+
+counties$cases_2020 <- with(cases_2020, #match by FIPS
+                        Count[match(
+                           counties$STCO_FIPS,
+                                    fips)])
+
+counties$cases_2020[counties$cases_2020 == 0] = NA #setting to NA for the plot visual
+
+
+ggplot() +
+   geom_sf(data = counties, aes(fill = cases_2020)) + 
+        scale_fill_viridis(name="Nero-Invasive WNV Cases 2020", 
+                           discrete=F, option = "viridis",
+                           direction = -1,
+                           na.value = "white") +  
+        xlab(" ") +
+        ylab(" ") +
+        theme(panel.grid.minor = element_blank(),
+              panel.grid.major = element_blank(),
+              panel.background = element_blank(),
+              plot.background = element_blank(),
+              panel.border = element_blank(),
+              legend.position = "bottom",
+              legend.title = element_text(size = 16, face = "bold"),
+              axis.title.x =  element_blank(),
+              axis.text.x =  element_blank(),
+              axis.title.y =  element_blank(),
+              axis.text.y =  element_blank(),
+              axis.ticks = element_blank(),
+              plot.title = element_blank())
+
+```
+
+
+
