@@ -30,6 +30,7 @@ ssh-keygen -t ed25519 -C "your.email@institution.edu"  (~/.ssh/id_ed25519)
 
 This produces:
 >`~/.ssh/id_ed25519`      (private key)
+
 >`~/.ssh/id_ed25519.pub` (public key)
 
 
