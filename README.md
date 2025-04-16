@@ -14,4 +14,5 @@ Everyone is welcome to use the Sandbox, no Pull Requests (PR) required. But, ple
   
 4.  [2024-08-12_informal_training_github](https://github.com/geoepi/sandbox/blob/main/2024-08-12-informal_training_github/2024-08-12_informal_training_github.md): Walk through of steps to integrate RStudio, Git, and GitHub. 
   
-5.  [2024-09-08_osf_geospatial](https://github.com/geoepi/sandbox/blob/main/2024-09-08-osf_geospatial/read_flaps_data.md): Walk through of steps to import FLAPS data from OSF and plot farm locations.     
+5.  [2024-09-08_osf_geospatial](https://github.com/geoepi/sandbox/blob/main/2024-09-08-osf_geospatial/read_flaps_data.md): Walk through of steps to import FLAPS data from OSF and plot farm locations.
+6.  [2025-04-16-git_from_atlas](https://github.com/geoepi/sandbox/blob/main/2025-04-16-git_from_atlas.md): Steps to connect Atlas HPC and GitHub.       
