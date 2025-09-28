@@ -1,0 +1,393 @@
+---
+title: "Landscape and Patch Shape Metrics"
+description: "Demo of calculating county shape and landscape metrics"
+format:
+  html: 
+    df-print: kable
+    code-fold: show
+    code-summary: "Hide code"
+    code-overflow: wrap
+    toc-title: Page Contents
+    toc: true
+    toc-depth: 2
+    toc-location: right
+    number-sections: false
+    html-math-method: katex
+    smooth-scroll: true
+editor: source
+editor_options: 
+  chunk_output_type: console
+---
+
+## Overview
+This script calculates a few landscape and patch metrics as a demonstration.  In this demo, *patches* are individual Florida Counties and the landscape, or surrounding background *matrix*, is a grid.  In addition to the patches and matrix, a few points around the periphery of the couny are shown; these represent seed location for simulations of disease spread.  
+     
+The purpose is to show how different measures can be calculated that reflect county shape and position relative to simulations.    
+   
+The first half of the script walks through spatial data manipulation to extract one county polygon, rasterize it, then calculate metrics.  However, the last section uses the *calc_county_metrics()* function to iterate through all counties in Florida.         
+
+## Libraries
+```{r, warning=FALSE, message=FALSE, echo=TRUE}
+library(here) #directory management
+library(tidyverse) #data wrangling
+library(tidyterra) # spatial
+library(raster) # spatial
+library(terra) # spatial
+library(sf) # spatial
+library(tigris) # county bounds
+library(viridis) # color ramps
+
+select <- dplyr::select # conflictwith raster
+options(dplyr.summarise.inform = FALSE)
+httr::set_config(httr::config(noprogress = TRUE))
+options(tigris_class = "sf", tigris_use_cache = TRUE,
+        tigris_progress = FALSE) # to load spatial data using sf
+```
+
+## Prepare County Data
+### Get County Boundaries
+Load all US Counties then subset for demo:
+```{r warning=FALSE, message=FALSE}
+counties_sf <- suppressMessages(counties(cb = TRUE, progress_bar=FALSE))
+
+keep_states <- c("FL")
+
+counties_demo <- counties(state = keep_states, cb = TRUE)
+
+# how many counties?
+length(unique(counties_demo$COUNTYFP))
+```
+
+### Project and Calc Area
+```{r warning=FALSE, message=FALSE}
+# US Atlas Equal Area: EPSG:9311
+counties_proj <- st_transform(counties_demo, 9311)
+
+# get crs
+r_crs_sf <- crs(counties_proj)
+
+# area in square kilometers
+counties_proj <- counties_proj %>%
+  mutate(area_km2 = as.numeric(st_area(geometry)) / 1e6)
+```
+
+### View Counties
+```{r fig.height=10, fig.width=10}
+ggplot(data = counties_proj) +
+  geom_sf(aes(fill = area_km2), color = "gray40", size = 0.2) +
+  scale_fill_viridis_c("Area (km)", option = "plasma") +
+  theme_minimal() +
+    theme(
+      plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"),
+      legend.position = "bottom",
+      legend.key.width = unit(2, "line"),
+      legend.key.height = unit(1, "line"),
+      legend.text = element_text(size = 10, face = "bold"),
+      legend.title = element_text(size = 18, face = "bold"),
+      axis.title.x = element_text(size = 18, face = "bold"),
+      axis.title.y = element_text(size = 22, face = "bold"),
+      axis.text.x =  element_text(size = 10, face = "bold"),
+      axis.text.y = element_text(size = 10, face = "bold"),
+      plot.title = element_text(size = 22, face = "bold"))
+```
+
+
+## Create Grid
+```{r warning=FALSE, message=FALSE}
+# get largest county
+largest_county <- counties_proj %>%
+  slice_max(area_km2, n = 1)
+
+# which county is it?
+largest_county$NAME; largest_county$STATE_NAME
+
+# expand by 50 km
+bbox <- st_bbox(largest_county)
+buffer_m <- 50000 # 50 km in meters
+bbox_expanded <- bbox
+bbox_expanded$xmin <- bbox$xmin - buffer_m
+bbox_expanded$ymin <- bbox$ymin - buffer_m
+bbox_expanded$xmax <- bbox$xmax + buffer_m
+bbox_expanded$ymax <- bbox$ymax + buffer_m
+
+# create extent object
+ext <- ext(bbox_expanded$xmin, bbox_expanded$xmax,
+           bbox_expanded$ymin, bbox_expanded$ymax)
+
+# grid resolution 5 km (5000 m)
+res_m <- 5000
+
+# blank raster template
+r_template <- rast(ext, resolution = res_m, 
+                   crs = st_crs(largest_county)$wkt)
+
+# check
+r_template
+```
+
+
+## Create Seed Locations
+Arbitrary selection of regualrly spaced point locations around the raster.  These are intended to represent seeding locations for disease spread simulations.
+```{r warning=FALSE, message=FALSE}
+res_m <- res(r_template)[1] 
+offset <- res_m * 2 # 2 cells, 10 km inward from edges
+
+# bounding box
+bb <- ext(r_template)
+xmin <- bb[1]; xmax <- bb[2]
+ymin <- bb[3]; ymax <- bb[4]
+
+# inward offsets
+xmin_in <- xmin + offset
+xmax_in <- xmax - offset
+ymin_in <- ymin + offset
+ymax_in <- ymax - offset
+
+# create points
+
+# north side
+x_north <- xmin_in + c(1/3, 2/3) * (xmax_in - xmin_in)
+north_pts <- data.frame(x = x_north, y = ymax_in)
+
+# south side
+x_south <- xmin_in + c(1/3, 2/3) * (xmax_in - xmin_in)
+south_pts <- data.frame(x = x_south, y = ymin_in)
+
+# east side
+y_east <- ymin_in + c(1/3, 2/3) * (ymax_in - ymin_in)
+east_pts <- data.frame(x = xmax_in, y = y_east)
+
+# west side
+y_west <- ymin_in + c(1/3, 2/3) * (ymax_in - ymin_in)
+west_pts <- data.frame(x = xmin_in, y = y_west)
+
+# combine all
+sim_origin_pnts <- rbind(north_pts, south_pts, east_pts, west_pts)
+
+# convert to sf
+sim_origin_pnts <- st_as_sf(sim_origin_pnts, coords = c("x", "y"), crs = st_crs(r_template))
+```
+
+### View Grid
+Rasterize the largest county to check results. The grid was constructed based on the largest county, so all other counties should fit within it.  The yellow points represent seeding/introduction locations for disease spread simulations.
+```{r fig.width=10, fig.height=10, warning=FALSE, message=FALSE}
+palm_bch_fl <- rasterize(vect(largest_county), r_template, 
+                        field = 1, background = 0)
+
+grid_df <- as.data.frame(palm_bch_fl, xy = TRUE, na.rm = FALSE)
+names(grid_df) <- c("x", "y", "value")
+
+grid_df$value <- factor(grid_df$value,
+                        levels = c(0, 1),
+                        labels = c("Outside", "Inside"))
+
+# as sf
+largest_sf <- st_as_sf(largest_county)
+
+ggplot() +
+  geom_tile(data = grid_df, aes(x = x, y = y, fill = value)) +
+  scale_fill_manual("Location", values = c("Outside" = "gray80", "Inside" = "steelblue")) +
+  geom_sf(data = largest_sf, fill = NA, color = "red", linewidth = 1) +
+  geom_sf(data = sim_origin_pnts, color = "black", fill = "yellow", shape = 21, size = 3, stroke = 1) +
+  coord_sf(crs = st_crs(largest_sf)) +
+  theme_minimal() +
+    theme(
+      plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"),
+      legend.position = "right",
+      legend.key.width = unit(0.5, "line"),
+      legend.key.height = unit(0.5, "line"),
+      legend.text = element_text(size = 10, face = "bold"),
+      legend.title = element_text(size = 18, face = "bold"),
+      axis.title.x = element_text(size = 18, face = "bold"),
+      axis.title.y = element_text(size = 22, face = "bold"),
+      axis.text.x =  element_text(size = 10, face = "bold"),
+      axis.text.y = element_text(size = 10, face = "bold"),
+      plot.title = element_text(size = 22, face = "bold")
+      ) + labs(title = "Palm Beach, FL \n (5km grid)")
+```
+
+
+## Metrics
+
+
+### Patch Metrics
+The *patch* refers to the geometry (area, shape, perimeter length, etc...) bounded by the county polygon.  These measures quantify patch shape and relative position in the grid.  
+```{r warning=FALSE, message=FALSE}
+# get county geo
+geom <- sf::st_geometry(largest_county)[[1]]
+
+# ensure it's valid
+geom <- sf::st_make_valid(geom)
+  
+# area
+area_vec_m2 <- as.numeric(sf::st_area(geom)) #m2
+area_vec_km2 <- area_vec_m2 / 1e6 #to km2
+
+# perimeter length
+perim_m <- as.numeric(sf::st_length(sf::st_boundary(geom))) # meters
+perim_km <- perim_m / 1000 # km
+
+# Polsby–Popper score (range 0-1, 1 is a perfect circle)
+compactness_pp <- 4 * pi * area_vec_m2 / (perim_m^2)
+
+# shape hull area (measure of shape irregularity, 1 indicates county matches convex hull)
+convex_hull_ratio <- area_vec_m2/as.numeric(sf::st_area(sf::st_convex_hull(geom)))
+
+# shape elongation (1 is a square, values greater scale relative to increased elongation)
+bb <- sf::st_bbox(geom)
+bbox_w <- bb$xmax - bb$xmin
+bbox_h <- bb$ymax - bb$ymin
+bbox_elongation <- pmax(bbox_w, bbox_h)/pmin(bbox_w, bbox_h)
+
+# centroid position relative to grid
+# measures centrality of county within grid
+
+#get county center
+centroid <- sf::st_centroid(geom)
+centroid_xy <- sf::st_coordinates(centroid)[1, ]
+
+# get grid extent
+ex <- terra::ext(palm_bch_fl) 
+rel_centroid_x <- (centroid_xy[1] - ex[1]) / (ex[2] - ex[1])
+rel_centroid_y <- (centroid_xy[2] - ex[3]) / (ex[4] - ex[3])
+```
+
+
+### Grid Metrics
+Measures below based on the grid created with the county polygon (the *patch*).  The term *matrix* refers to background points, i.e., outside the county and around the *patch*. These measures look at aspects of grid and cell geometry.  
+```{r warning=FALSE, message=FALSE}
+# convert to raster format
+r_rast <- raster::raster(palm_bch_fl)
+vals <- raster::getValues(r_rast)
+
+# 1 indicates cell is in county, everything else is NA
+vals_pres <- ifelse(!is.na(vals) & vals == 1, 1L, NA_integer_)
+raster::values(r_rast) <- vals_pres
+  
+res_m <- raster::res(r_rast)[1] # resolution in meters
+cell_area_m2 <- res_m * res_m # cell area
+raster_cell_count <- sum(!is.na(raster::getValues(r_rast))) # pos cell count
+area_raster_km2 <- (raster_cell_count * cell_area_m2) / 1e6 # area in km
+
+# ratio of county cels to background cells
+matrix_cell_count <- sum(is.na(raster::getValues(r_rast))) 
+patch_matrix_ratio <- raster_cell_count/matrix_cell_count
+```   
+
+### Simulation Origins
+A few more measures.  These look at the spatial relationship between the *patch* and the locations used to initiate or seed the spread simulations.  
+```{r warning=FALSE, message=FALSE}
+# distances from centroid 
+centroid_sfc <- sf::st_sfc(centroid, crs = r_crs_sf)
+centroid_sf <- sf::st_sf(geometry = centroid_sfc)
+
+# distances between county center and simulation seed locations
+dist_to_centroid_m <- sf::st_distance(sim_origin_pnts, centroid_sf) 
+dist_to_centroid_km_per_origin <- as.numeric(dist_to_centroid_m) / 1000 # to km
+
+# minimum/closest simulation origin from above
+min_dist_to_centroid_km <- min(dist_to_centroid_km_per_origin)
+
+# distance to county boundary from simulation seed loactions
+boundary_geom <- sf::st_boundary(geom)
+boundary_sfc <- sf::st_sfc(boundary_geom, crs = r_crs_sf)
+boundary_sf <- sf::st_sf(geometry = boundary_sfc)
+dist_to_boundary_m <- sf::st_distance(sim_origin_pnts, boundary_sf) # distances
+dist_to_boundary_km_per_origin <- as.numeric(dist_to_boundary_m) / 1000 # to km
+min_dist_to_boundary_km <- min(dist_to_boundary_km_per_origin) # min of above
+```
+
+### Combine Metrics
+Organizing data.
+```{r warning=FALSE, message=FALSE}
+demo_county_metrics <- tibble(
+    area_vec_km2 = area_vec_km2,
+    area_vec_m2 = area_vec_m2,
+    perimeter_km = perim_km,
+    compactness_pp = compactness_pp,
+    convex_hull_ratio = convex_hull_ratio,
+    bbox_elongation = bbox_elongation,
+    centroid_x = centroid_xy[1],
+    centroid_y = centroid_xy[2],
+    centroid_rel_x = rel_centroid_x,
+    centroid_rel_y = rel_centroid_y,
+    raster_cell_count = raster_cell_count,
+    area_raster_km2 = area_raster_km2,
+    patch_matrix_ratio = patch_matrix_ratio,
+    min_dist_to_centroid_km = min_dist_to_centroid_km,
+    min_dist_to_boundary_km = min_dist_to_boundary_km
+  )
+  
+# Results
+data.frame(demo_county_metrics)  
+```
+
+## County Iterate
+Run the same process on all counties using the *calc_county_metrics()* function.  Note: The *calc_county_metrics()* function creates points representing the simulation seed locations; this will likely need to be modified if the sim locations are pre-existing or determined through other means.
+
+### Load Function
+```{r}
+source(here("2025-09-28-landscape-metrics/R/calc_county_metrics.R"))
+
+```
+
+### Run Function
+```{r warning=FALSE, message=FALSE}
+county_mets <- calc_county_metrics(counties_proj, # county polygons
+                                   buffer_m = 50000, # buffer in m for fake sim points
+                                   res_m = 5000) # cell resolution
+```  
+
+### Join Data
+Matching metrics back to original county polygons.  
+```{r}
+counties_with_mets <- counties_proj %>%
+  left_join(county_mets, by = c("NAME" = "county_name", "STATE_NAME" = "state_name"))
+
+metrics_long <- counties_with_mets %>%
+  st_drop_geometry() %>%
+  select(NAME, STATE_NAME, # for match
+         area_vec_km2, compactness_pp, # varibales to plot
+         convex_hull_ratio, bbox_elongation,
+         patch_matrix_ratio, min_dist_to_boundary_km
+         ) %>%
+  pivot_longer(
+    cols = c(area_vec_km2, compactness_pp, convex_hull_ratio, bbox_elongation,
+             patch_matrix_ratio, min_dist_to_boundary_km),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  group_by(metric) %>% # scale for a common legend
+  mutate(scaled_value = (value - min(value, na.rm = TRUE)) / 
+                        (max(value, na.rm = TRUE) - min(value, na.rm = TRUE))) %>%
+  ungroup() %>%
+  left_join(counties_proj, by = c("NAME", "STATE_NAME")) %>%
+  st_as_sf()
+
+```
+
+### Plot Metrics
+Plot a few metrics for comparison.  
+```{r fig.width=12, fig.height=10}
+ggplot(metrics_long) +
+  geom_sf(aes(fill = scaled_value), color = "gray40", size = 0.2) +
+  scale_fill_viridis_c("Value", option = "plasma") +
+  facet_wrap(~ metric, ncol=3) +
+  theme_minimal() +
+    theme(
+      plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"),
+      legend.position = "bottom",
+      legend.key.width = unit(2, "line"),
+      legend.key.height = unit(1, "line"),
+      legend.text = element_text(size = 10, face = "bold"),
+      legend.title = element_text(size = 18, face = "bold"),
+      strip.text = element_text(size = 18, face = "bold"),
+      axis.title.x = element_text(size = 18, face = "bold"),
+      axis.title.y = element_text(size = 22, face = "bold"),
+      axis.text.x =  element_text(size = 10, face = "bold"),
+      axis.text.y = element_text(size = 10, face = "bold"),
+      plot.title = element_text(size = 22, face = "bold")
+      ) + labs(title = "Landscape & Patch Metrics")
+
+```
+

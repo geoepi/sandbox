@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.335">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Demo of calculating county shape and landscape metrics">
+
+<title>Landscape and Patch Shape Metrics</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="2025-09-28-landscape_metrics_files/libs/clipboard/clipboard.min.js"></script>
+<script src="2025-09-28-landscape_metrics_files/libs/quarto-html/quarto.js"></script>
+<script src="2025-09-28-landscape_metrics_files/libs/quarto-html/popper.min.js"></script>
+<script src="2025-09-28-landscape_metrics_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="2025-09-28-landscape_metrics_files/libs/quarto-html/anchor.min.js"></script>
+<link href="2025-09-28-landscape_metrics_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="2025-09-28-landscape_metrics_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="2025-09-28-landscape_metrics_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="2025-09-28-landscape_metrics_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="2025-09-28-landscape_metrics_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<style>html{ scroll-behavior: smooth; }</style>
+
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Page Contents</h2>
+   
+  <ul class="collapse">
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#libraries" id="toc-libraries" class="nav-link" data-scroll-target="#libraries">Libraries</a></li>
+  <li><a href="#prepare-county-data" id="toc-prepare-county-data" class="nav-link" data-scroll-target="#prepare-county-data">Prepare County Data</a></li>
+  <li><a href="#create-grid" id="toc-create-grid" class="nav-link" data-scroll-target="#create-grid">Create Grid</a></li>
+  <li><a href="#create-seed-locations" id="toc-create-seed-locations" class="nav-link" data-scroll-target="#create-seed-locations">Create Seed Locations</a></li>
+  <li><a href="#metrics" id="toc-metrics" class="nav-link" data-scroll-target="#metrics">Metrics</a></li>
+  <li><a href="#county-iterate" id="toc-county-iterate" class="nav-link" data-scroll-target="#county-iterate">County Iterate</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Landscape and Patch Shape Metrics</h1>
+</div>
+
+<div>
+  <div class="description">
+    Demo of calculating county shape and landscape metrics
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<p>This script calculates a few landscape and patch metrics as a demonstration. In this demo, <em>patches</em> are individual Florida Counties and the landscape, or surrounding background <em>matrix</em>, is a grid. In addition to the patches and matrix, a few points around the periphery of the couny are shown; these represent seed location for simulations of disease spread.</p>
+<p>The purpose is to show how different measures can be calculated that reflect county shape and position relative to simulations.</p>
+<p>The first half of the script walks through spatial data manipulation to extract one county polygon, rasterize it, then calculate metrics. However, the last section uses the <em>calc_county_metrics()</em> function to iterate through all counties in Florida.</p>
+</section>
+<section id="libraries" class="level2">
+<h2 class="anchored" data-anchor-id="libraries">Libraries</h2>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here) <span class="co">#directory management</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse) <span class="co">#data wrangling</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyterra) <span class="co"># spatial</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(raster) <span class="co"># spatial</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(terra) <span class="co"># spatial</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf) <span class="co"># spatial</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tigris) <span class="co"># county bounds</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(viridis) <span class="co"># color ramps</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>select <span class="ot">&lt;-</span> dplyr<span class="sc">::</span>select <span class="co"># conflictwith raster</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">dplyr.summarise.inform =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>httr<span class="sc">::</span><span class="fu">set_config</span>(httr<span class="sc">::</span><span class="fu">config</span>(<span class="at">noprogress =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">tigris_class =</span> <span class="st">"sf"</span>, <span class="at">tigris_use_cache =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">tigris_progress =</span> <span class="cn">FALSE</span>) <span class="co"># to load spatial data using sf</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="prepare-county-data" class="level2">
+<h2 class="anchored" data-anchor-id="prepare-county-data">Prepare County Data</h2>
+<section id="get-county-boundaries" class="level3">
+<h3 class="anchored" data-anchor-id="get-county-boundaries">Get County Boundaries</h3>
+<p>Load all US Counties then subset for demo:</p>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>counties_sf <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(<span class="fu">counties</span>(<span class="at">cb =</span> <span class="cn">TRUE</span>, <span class="at">progress_bar=</span><span class="cn">FALSE</span>))</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>keep_states <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"FL"</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>counties_demo <span class="ot">&lt;-</span> <span class="fu">counties</span>(<span class="at">state =</span> keep_states, <span class="at">cb =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># how many counties?</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(counties_demo<span class="sc">$</span>COUNTYFP))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 67</code></pre>
+</div>
+</div>
+</section>
+<section id="project-and-calc-area" class="level3">
+<h3 class="anchored" data-anchor-id="project-and-calc-area">Project and Calc Area</h3>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># US Atlas Equal Area: EPSG:9311</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>counties_proj <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(counties_demo, <span class="dv">9311</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># get crs</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>r_crs_sf <span class="ot">&lt;-</span> <span class="fu">crs</span>(counties_proj)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># area in square kilometers</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>counties_proj <span class="ot">&lt;-</span> counties_proj <span class="sc">%&gt;%</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">area_km2 =</span> <span class="fu">as.numeric</span>(<span class="fu">st_area</span>(geometry)) <span class="sc">/</span> <span class="fl">1e6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="view-counties" class="level3">
+<h3 class="anchored" data-anchor-id="view-counties">View Counties</h3>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="at">data =</span> counties_proj) <span class="sc">+</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="fu">aes</span>(<span class="at">fill =</span> area_km2), <span class="at">color =</span> <span class="st">"gray40"</span>, <span class="at">size =</span> <span class="fl">0.2</span>) <span class="sc">+</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis_c</span>(<span class="st">"Area (km)"</span>, <span class="at">option =</span> <span class="st">"plasma"</span>) <span class="sc">+</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.margin =</span> <span class="fu">unit</span>(<span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>, <span class="fl">0.1</span>, <span class="fl">0.1</span>), <span class="st">"cm"</span>),</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.position =</span> <span class="st">"bottom"</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.key.width =</span> <span class="fu">unit</span>(<span class="dv">2</span>, <span class="st">"line"</span>),</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.key.height =</span> <span class="fu">unit</span>(<span class="dv">1</span>, <span class="st">"line"</span>),</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">18</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.title.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">18</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.title.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">22</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.text.x =</span>  <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">22</span>, <span class="at">face =</span> <span class="st">"bold"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="2025-09-28-landscape_metrics_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="960"></p>
+</div>
+</div>
+</section>
+</section>
+<section id="create-grid" class="level2">
+<h2 class="anchored" data-anchor-id="create-grid">Create Grid</h2>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get largest county</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>largest_county <span class="ot">&lt;-</span> counties_proj <span class="sc">%&gt;%</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(area_km2, <span class="at">n =</span> <span class="dv">1</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># which county is it?</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>largest_county<span class="sc">$</span>NAME; largest_county<span class="sc">$</span>STATE_NAME</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Palm Beach"</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Florida"</code></pre>
+</div>
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># expand by 50 km</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>bbox <span class="ot">&lt;-</span> <span class="fu">st_bbox</span>(largest_county)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>buffer_m <span class="ot">&lt;-</span> <span class="dv">50000</span> <span class="co"># 50 km in meters</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>bbox_expanded <span class="ot">&lt;-</span> bbox</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>bbox_expanded<span class="sc">$</span>xmin <span class="ot">&lt;-</span> bbox<span class="sc">$</span>xmin <span class="sc">-</span> buffer_m</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>bbox_expanded<span class="sc">$</span>ymin <span class="ot">&lt;-</span> bbox<span class="sc">$</span>ymin <span class="sc">-</span> buffer_m</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>bbox_expanded<span class="sc">$</span>xmax <span class="ot">&lt;-</span> bbox<span class="sc">$</span>xmax <span class="sc">+</span> buffer_m</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>bbox_expanded<span class="sc">$</span>ymax <span class="ot">&lt;-</span> bbox<span class="sc">$</span>ymax <span class="sc">+</span> buffer_m</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co"># create extent object</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>ext <span class="ot">&lt;-</span> <span class="fu">ext</span>(bbox_expanded<span class="sc">$</span>xmin, bbox_expanded<span class="sc">$</span>xmax,</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>           bbox_expanded<span class="sc">$</span>ymin, bbox_expanded<span class="sc">$</span>ymax)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="co"># grid resolution 5 km (5000 m)</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>res_m <span class="ot">&lt;-</span> <span class="dv">5000</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="co"># blank raster template</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>r_template <span class="ot">&lt;-</span> <span class="fu">rast</span>(ext, <span class="at">resolution =</span> res_m, </span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>                   <span class="at">crs =</span> <span class="fu">st_crs</span>(largest_county)<span class="sc">$</span>wkt)</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="co"># check</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>r_template</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>class       : SpatRaster 
+dimensions  : 37, 38, 1  (nrow, ncol, nlyr)
+resolution  : 5053.752, 5054.088  (x, y)
+extent      : 1849779, 2041822, -1907533, -1720532  (xmin, xmax, ymin, ymax)
+coord. ref. : NAD27 / US National Atlas Equal Area (EPSG:9311) </code></pre>
+</div>
+</div>
+</section>
+<section id="create-seed-locations" class="level2">
+<h2 class="anchored" data-anchor-id="create-seed-locations">Create Seed Locations</h2>
+<p>Arbitrary selection of regualrly spaced point locations around the raster. These are intended to represent seeding locations for disease spread simulations.</p>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>res_m <span class="ot">&lt;-</span> <span class="fu">res</span>(r_template)[<span class="dv">1</span>] </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>offset <span class="ot">&lt;-</span> res_m <span class="sc">*</span> <span class="dv">2</span> <span class="co"># 2 cells, 10 km inward from edges</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># bounding box</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>bb <span class="ot">&lt;-</span> <span class="fu">ext</span>(r_template)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>xmin <span class="ot">&lt;-</span> bb[<span class="dv">1</span>]; xmax <span class="ot">&lt;-</span> bb[<span class="dv">2</span>]</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>ymin <span class="ot">&lt;-</span> bb[<span class="dv">3</span>]; ymax <span class="ot">&lt;-</span> bb[<span class="dv">4</span>]</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co"># inward offsets</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>xmin_in <span class="ot">&lt;-</span> xmin <span class="sc">+</span> offset</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>xmax_in <span class="ot">&lt;-</span> xmax <span class="sc">-</span> offset</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>ymin_in <span class="ot">&lt;-</span> ymin <span class="sc">+</span> offset</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>ymax_in <span class="ot">&lt;-</span> ymax <span class="sc">-</span> offset</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="co"># create points</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="co"># north side</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>x_north <span class="ot">&lt;-</span> xmin_in <span class="sc">+</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>, <span class="dv">2</span><span class="sc">/</span><span class="dv">3</span>) <span class="sc">*</span> (xmax_in <span class="sc">-</span> xmin_in)</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>north_pts <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> x_north, <span class="at">y =</span> ymax_in)</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="co"># south side</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>x_south <span class="ot">&lt;-</span> xmin_in <span class="sc">+</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>, <span class="dv">2</span><span class="sc">/</span><span class="dv">3</span>) <span class="sc">*</span> (xmax_in <span class="sc">-</span> xmin_in)</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>south_pts <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> x_south, <span class="at">y =</span> ymin_in)</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a><span class="co"># east side</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>y_east <span class="ot">&lt;-</span> ymin_in <span class="sc">+</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>, <span class="dv">2</span><span class="sc">/</span><span class="dv">3</span>) <span class="sc">*</span> (ymax_in <span class="sc">-</span> ymin_in)</span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>east_pts <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> xmax_in, <span class="at">y =</span> y_east)</span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a><span class="co"># west side</span></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>y_west <span class="ot">&lt;-</span> ymin_in <span class="sc">+</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>, <span class="dv">2</span><span class="sc">/</span><span class="dv">3</span>) <span class="sc">*</span> (ymax_in <span class="sc">-</span> ymin_in)</span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a>west_pts <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> xmin_in, <span class="at">y =</span> y_west)</span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a><span class="co"># combine all</span></span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>sim_origin_pnts <span class="ot">&lt;-</span> <span class="fu">rbind</span>(north_pts, south_pts, east_pts, west_pts)</span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a><span class="co"># convert to sf</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>sim_origin_pnts <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(sim_origin_pnts, <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"x"</span>, <span class="st">"y"</span>), <span class="at">crs =</span> <span class="fu">st_crs</span>(r_template))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<section id="view-grid" class="level3">
+<h3 class="anchored" data-anchor-id="view-grid">View Grid</h3>
+<p>Rasterize the largest county to check results. The grid was constructed based on the largest county, so all other counties should fit within it. The yellow points represent seeding/introduction locations for disease spread simulations.</p>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>palm_bch_fl <span class="ot">&lt;-</span> <span class="fu">rasterize</span>(<span class="fu">vect</span>(largest_county), r_template, </span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>                        <span class="at">field =</span> <span class="dv">1</span>, <span class="at">background =</span> <span class="dv">0</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>grid_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(palm_bch_fl, <span class="at">xy =</span> <span class="cn">TRUE</span>, <span class="at">na.rm =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(grid_df) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"x"</span>, <span class="st">"y"</span>, <span class="st">"value"</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>grid_df<span class="sc">$</span>value <span class="ot">&lt;-</span> <span class="fu">factor</span>(grid_df<span class="sc">$</span>value,</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>                        <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>),</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>                        <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"Outside"</span>, <span class="st">"Inside"</span>))</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="co"># as sf</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>largest_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(largest_county)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_tile</span>(<span class="at">data =</span> grid_df, <span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y, <span class="at">fill =</span> value)) <span class="sc">+</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="st">"Location"</span>, <span class="at">values =</span> <span class="fu">c</span>(<span class="st">"Outside"</span> <span class="ot">=</span> <span class="st">"gray80"</span>, <span class="st">"Inside"</span> <span class="ot">=</span> <span class="st">"steelblue"</span>)) <span class="sc">+</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> largest_sf, <span class="at">fill =</span> <span class="cn">NA</span>, <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> sim_origin_pnts, <span class="at">color =</span> <span class="st">"black"</span>, <span class="at">fill =</span> <span class="st">"yellow"</span>, <span class="at">shape =</span> <span class="dv">21</span>, <span class="at">size =</span> <span class="dv">3</span>, <span class="at">stroke =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_sf</span>(<span class="at">crs =</span> <span class="fu">st_crs</span>(largest_sf)) <span class="sc">+</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.margin =</span> <span class="fu">unit</span>(<span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>, <span class="fl">0.1</span>, <span class="fl">0.1</span>), <span class="st">"cm"</span>),</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.position =</span> <span class="st">"right"</span>,</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.key.width =</span> <span class="fu">unit</span>(<span class="fl">0.5</span>, <span class="st">"line"</span>),</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.key.height =</span> <span class="fu">unit</span>(<span class="fl">0.5</span>, <span class="st">"line"</span>),</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">18</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.title.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">18</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.title.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">22</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.text.x =</span>  <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">22</span>, <span class="at">face =</span> <span class="st">"bold"</span>)</span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Palm Beach, FL </span><span class="sc">\n</span><span class="st"> (5km grid)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="2025-09-28-landscape_metrics_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="960"></p>
+</div>
+</div>
+</section>
+</section>
+<section id="metrics" class="level2">
+<h2 class="anchored" data-anchor-id="metrics">Metrics</h2>
+<section id="patch-metrics" class="level3">
+<h3 class="anchored" data-anchor-id="patch-metrics">Patch Metrics</h3>
+<p>The <em>patch</em> refers to the geometry (area, shape, perimeter length, etc…) bounded by the county polygon. These measures quantify patch shape and relative position in the grid.</p>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get county geo</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>geom <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_geometry</span>(largest_county)[[<span class="dv">1</span>]]</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># ensure it's valid</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>geom <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_make_valid</span>(geom)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="co"># area</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>area_vec_m2 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(sf<span class="sc">::</span><span class="fu">st_area</span>(geom)) <span class="co">#m2</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>area_vec_km2 <span class="ot">&lt;-</span> area_vec_m2 <span class="sc">/</span> <span class="fl">1e6</span> <span class="co">#to km2</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="co"># perimeter length</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>perim_m <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(sf<span class="sc">::</span><span class="fu">st_length</span>(sf<span class="sc">::</span><span class="fu">st_boundary</span>(geom))) <span class="co"># meters</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>perim_km <span class="ot">&lt;-</span> perim_m <span class="sc">/</span> <span class="dv">1000</span> <span class="co"># km</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Polsby–Popper score (range 0-1, 1 is a perfect circle)</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>compactness_pp <span class="ot">&lt;-</span> <span class="dv">4</span> <span class="sc">*</span> pi <span class="sc">*</span> area_vec_m2 <span class="sc">/</span> (perim_m<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a><span class="co"># shape hull area (measure of shape irregularity, 1 indicates county matches convex hull)</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>convex_hull_ratio <span class="ot">&lt;-</span> area_vec_m2<span class="sc">/</span><span class="fu">as.numeric</span>(sf<span class="sc">::</span><span class="fu">st_area</span>(sf<span class="sc">::</span><span class="fu">st_convex_hull</span>(geom)))</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="co"># shape elongation (1 is a square, values greater scale relative to increased elongation)</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>bb <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_bbox</span>(geom)</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>bbox_w <span class="ot">&lt;-</span> bb<span class="sc">$</span>xmax <span class="sc">-</span> bb<span class="sc">$</span>xmin</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>bbox_h <span class="ot">&lt;-</span> bb<span class="sc">$</span>ymax <span class="sc">-</span> bb<span class="sc">$</span>ymin</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>bbox_elongation <span class="ot">&lt;-</span> <span class="fu">pmax</span>(bbox_w, bbox_h)<span class="sc">/</span><span class="fu">pmin</span>(bbox_w, bbox_h)</span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a><span class="co"># centroid position relative to grid</span></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a><span class="co"># measures centrality of county within grid</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a><span class="co">#get county center</span></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>centroid <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_centroid</span>(geom)</span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>centroid_xy <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_coordinates</span>(centroid)[<span class="dv">1</span>, ]</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a><span class="co"># get grid extent</span></span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>ex <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">ext</span>(palm_bch_fl) </span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>rel_centroid_x <span class="ot">&lt;-</span> (centroid_xy[<span class="dv">1</span>] <span class="sc">-</span> ex[<span class="dv">1</span>]) <span class="sc">/</span> (ex[<span class="dv">2</span>] <span class="sc">-</span> ex[<span class="dv">1</span>])</span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>rel_centroid_y <span class="ot">&lt;-</span> (centroid_xy[<span class="dv">2</span>] <span class="sc">-</span> ex[<span class="dv">3</span>]) <span class="sc">/</span> (ex[<span class="dv">4</span>] <span class="sc">-</span> ex[<span class="dv">3</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="grid-metrics" class="level3">
+<h3 class="anchored" data-anchor-id="grid-metrics">Grid Metrics</h3>
+<p>Measures below based on the grid created with the county polygon (the <em>patch</em>). The term <em>matrix</em> refers to background points, i.e., outside the county and around the <em>patch</em>. These measures look at aspects of grid and cell geometry.</p>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># convert to raster format</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>r_rast <span class="ot">&lt;-</span> raster<span class="sc">::</span><span class="fu">raster</span>(palm_bch_fl)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>vals <span class="ot">&lt;-</span> raster<span class="sc">::</span><span class="fu">getValues</span>(r_rast)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 1 indicates cell is in county, everything else is NA</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>vals_pres <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="sc">!</span><span class="fu">is.na</span>(vals) <span class="sc">&amp;</span> vals <span class="sc">==</span> <span class="dv">1</span>, 1L, <span class="cn">NA_integer_</span>)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>raster<span class="sc">::</span><span class="fu">values</span>(r_rast) <span class="ot">&lt;-</span> vals_pres</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>res_m <span class="ot">&lt;-</span> raster<span class="sc">::</span><span class="fu">res</span>(r_rast)[<span class="dv">1</span>] <span class="co"># resolution in meters</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>cell_area_m2 <span class="ot">&lt;-</span> res_m <span class="sc">*</span> res_m <span class="co"># cell area</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>raster_cell_count <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.na</span>(raster<span class="sc">::</span><span class="fu">getValues</span>(r_rast))) <span class="co"># pos cell count</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>area_raster_km2 <span class="ot">&lt;-</span> (raster_cell_count <span class="sc">*</span> cell_area_m2) <span class="sc">/</span> <span class="fl">1e6</span> <span class="co"># area in km</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="co"># ratio of county cels to background cells</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>matrix_cell_count <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(raster<span class="sc">::</span><span class="fu">getValues</span>(r_rast))) </span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>patch_matrix_ratio <span class="ot">&lt;-</span> raster_cell_count<span class="sc">/</span>matrix_cell_count</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="simulation-origins" class="level3">
+<h3 class="anchored" data-anchor-id="simulation-origins">Simulation Origins</h3>
+<p>A few more measures. These look at the spatial relationship between the <em>patch</em> and the locations used to initiate or seed the spread simulations.</p>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># distances from centroid </span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>centroid_sfc <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_sfc</span>(centroid, <span class="at">crs =</span> r_crs_sf)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>centroid_sf <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_sf</span>(<span class="at">geometry =</span> centroid_sfc)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co"># distances between county center and simulation seed locations</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>dist_to_centroid_m <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_distance</span>(sim_origin_pnts, centroid_sf) </span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>dist_to_centroid_km_per_origin <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(dist_to_centroid_m) <span class="sc">/</span> <span class="dv">1000</span> <span class="co"># to km</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="co"># minimum/closest simulation origin from above</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>min_dist_to_centroid_km <span class="ot">&lt;-</span> <span class="fu">min</span>(dist_to_centroid_km_per_origin)</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a><span class="co"># distance to county boundary from simulation seed loactions</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>boundary_geom <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_boundary</span>(geom)</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>boundary_sfc <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_sfc</span>(boundary_geom, <span class="at">crs =</span> r_crs_sf)</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>boundary_sf <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_sf</span>(<span class="at">geometry =</span> boundary_sfc)</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>dist_to_boundary_m <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_distance</span>(sim_origin_pnts, boundary_sf) <span class="co"># distances</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>dist_to_boundary_km_per_origin <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(dist_to_boundary_m) <span class="sc">/</span> <span class="dv">1000</span> <span class="co"># to km</span></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>min_dist_to_boundary_km <span class="ot">&lt;-</span> <span class="fu">min</span>(dist_to_boundary_km_per_origin) <span class="co"># min of above</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="combine-metrics" class="level3">
+<h3 class="anchored" data-anchor-id="combine-metrics">Combine Metrics</h3>
+<p>Organizing data.</p>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>demo_county_metrics <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">area_vec_km2 =</span> area_vec_km2,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">area_vec_m2 =</span> area_vec_m2,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">perimeter_km =</span> perim_km,</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">compactness_pp =</span> compactness_pp,</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">convex_hull_ratio =</span> convex_hull_ratio,</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">bbox_elongation =</span> bbox_elongation,</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">centroid_x =</span> centroid_xy[<span class="dv">1</span>],</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">centroid_y =</span> centroid_xy[<span class="dv">2</span>],</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">centroid_rel_x =</span> rel_centroid_x,</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">centroid_rel_y =</span> rel_centroid_y,</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">raster_cell_count =</span> raster_cell_count,</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">area_raster_km2 =</span> area_raster_km2,</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">patch_matrix_ratio =</span> patch_matrix_ratio,</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_dist_to_centroid_km =</span> min_dist_to_centroid_km,</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_dist_to_boundary_km =</span> min_dist_to_boundary_km</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Results</span></span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(demo_county_metrics)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="table table-sm table-striped">
+<colgroup>
+<col style="width: 5%">
+<col style="width: 5%">
+<col style="width: 5%">
+<col style="width: 6%">
+<col style="width: 7%">
+<col style="width: 6%">
+<col style="width: 4%">
+<col style="width: 4%">
+<col style="width: 6%">
+<col style="width: 6%">
+<col style="width: 7%">
+<col style="width: 6%">
+<col style="width: 7%">
+<col style="width: 10%">
+<col style="width: 10%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">area_vec_km2</th>
+<th style="text-align: right;">area_vec_m2</th>
+<th style="text-align: right;">perimeter_km</th>
+<th style="text-align: right;">compactness_pp</th>
+<th style="text-align: right;">convex_hull_ratio</th>
+<th style="text-align: right;">bbox_elongation</th>
+<th style="text-align: right;">centroid_x</th>
+<th style="text-align: right;">centroid_y</th>
+<th style="text-align: right;">centroid_rel_x</th>
+<th style="text-align: right;">centroid_rel_y</th>
+<th style="text-align: right;">raster_cell_count</th>
+<th style="text-align: right;">area_raster_km2</th>
+<th style="text-align: right;">patch_matrix_ratio</th>
+<th style="text-align: right;">min_dist_to_centroid_km</th>
+<th style="text-align: right;">min_dist_to_boundary_km</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">5776.47</td>
+<td style="text-align: right;">5776470130</td>
+<td style="text-align: right;">309.3211</td>
+<td style="text-align: right;">0.7586707</td>
+<td style="text-align: right;">0.9777483</td>
+<td style="text-align: right;">1.057945</td>
+<td style="text-align: right;">1946937</td>
+<td style="text-align: right;">-1814260</td>
+<td style="text-align: right;">0.5059172</td>
+<td style="text-align: right;">0.4987841</td>
+<td style="text-align: right;">226</td>
+<td style="text-align: right;">5772.132</td>
+<td style="text-align: right;">0.1915254</td>
+<td style="text-align: right;">87.59497</td>
+<td style="text-align: right;">39.9824</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="county-iterate" class="level2">
+<h2 class="anchored" data-anchor-id="county-iterate">County Iterate</h2>
+<p>Run the same process on all counties using the <em>calc_county_metrics()</em> function. Note: The <em>calc_county_metrics()</em> function creates points representing the simulation seed locations; this will likely need to be modified if the sim locations are pre-existing or determined through other means.</p>
+<section id="load-function" class="level3">
+<h3 class="anchored" data-anchor-id="load-function">Load Function</h3>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">"2025-09-28-landscape-metrics/R/calc_county_metrics.R"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="run-function" class="level3">
+<h3 class="anchored" data-anchor-id="run-function">Run Function</h3>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>county_mets <span class="ot">&lt;-</span> <span class="fu">calc_county_metrics</span>(counties_proj, <span class="co"># county polygons</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>                                   <span class="at">buffer_m =</span> <span class="dv">50000</span>, <span class="co"># buffer in m for fake sim points</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>                                   <span class="at">res_m =</span> <span class="dv">5000</span>) <span class="co"># cell resolution</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="join-data" class="level3">
+<h3 class="anchored" data-anchor-id="join-data">Join Data</h3>
+<p>Matching metrics back to original county polygons.</p>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>counties_with_mets <span class="ot">&lt;-</span> counties_proj <span class="sc">%&gt;%</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(county_mets, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"NAME"</span> <span class="ot">=</span> <span class="st">"county_name"</span>, <span class="st">"STATE_NAME"</span> <span class="ot">=</span> <span class="st">"state_name"</span>))</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>metrics_long <span class="ot">&lt;-</span> counties_with_mets <span class="sc">%&gt;%</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(NAME, STATE_NAME, <span class="co"># for match</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>         area_vec_km2, compactness_pp, <span class="co"># varibales to plot</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>         convex_hull_ratio, bbox_elongation,</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>         patch_matrix_ratio, min_dist_to_boundary_km</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>         ) <span class="sc">%&gt;%</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">cols =</span> <span class="fu">c</span>(area_vec_km2, compactness_pp, convex_hull_ratio, bbox_elongation,</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>             patch_matrix_ratio, min_dist_to_boundary_km),</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_to =</span> <span class="st">"metric"</span>,</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_to =</span> <span class="st">"value"</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(metric) <span class="sc">%&gt;%</span> <span class="co"># scale for a common legend</span></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">scaled_value =</span> (value <span class="sc">-</span> <span class="fu">min</span>(value, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">/</span> </span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>                        (<span class="fu">max</span>(value, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">-</span> <span class="fu">min</span>(value, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))) <span class="sc">%&gt;%</span></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(counties_proj, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"NAME"</span>, <span class="st">"STATE_NAME"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_as_sf</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="plot-metrics" class="level3">
+<h3 class="anchored" data-anchor-id="plot-metrics">Plot Metrics</h3>
+<p>Plot a few metrics for comparison.</p>
+<div class="cell">
+<details open="">
+<summary>Hide code</summary>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(metrics_long) <span class="sc">+</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="fu">aes</span>(<span class="at">fill =</span> scaled_value), <span class="at">color =</span> <span class="st">"gray40"</span>, <span class="at">size =</span> <span class="fl">0.2</span>) <span class="sc">+</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis_c</span>(<span class="st">"Value"</span>, <span class="at">option =</span> <span class="st">"plasma"</span>) <span class="sc">+</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> metric, <span class="at">ncol=</span><span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.margin =</span> <span class="fu">unit</span>(<span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>, <span class="fl">0.1</span>, <span class="fl">0.1</span>), <span class="st">"cm"</span>),</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.position =</span> <span class="st">"bottom"</span>,</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.key.width =</span> <span class="fu">unit</span>(<span class="dv">2</span>, <span class="st">"line"</span>),</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.key.height =</span> <span class="fu">unit</span>(<span class="dv">1</span>, <span class="st">"line"</span>),</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">18</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">18</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.title.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">18</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.title.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">22</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.text.x =</span>  <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">22</span>, <span class="at">face =</span> <span class="st">"bold"</span>)</span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Landscape &amp; Patch Metrics"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="2025-09-28-landscape_metrics_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="1152"></p>
+</div>
+</div>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+<script src="2025-09-28-landscape_metrics_files/libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
