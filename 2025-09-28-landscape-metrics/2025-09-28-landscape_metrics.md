@@ -1,27 +1,39 @@
----
-title: "Landscape and Patch Shape Metrics"
-description: "Demo of calculating county shape and landscape metrics"
-format: 
-   gfm:
-     toc: true
-     toc-depth: 2
-     code-fold: show
-     code-summary: "Hide code"
-     preview-mode: raw
-editor: source
-editor_options: 
-  chunk_output_type: console
----
+Landscape and Patch Shape Metrics
+================
+
+- <a href="#overview" id="toc-overview">Overview</a>
+- <a href="#libraries" id="toc-libraries">Libraries</a>
+- <a href="#prepare-county-data" id="toc-prepare-county-data">Prepare
+  County Data</a>
+- <a href="#create-grid" id="toc-create-grid">Create Grid</a>
+- <a href="#create-seed-locations" id="toc-create-seed-locations">Create
+  Seed Locations</a>
+- <a href="#metrics" id="toc-metrics">Metrics</a>
+- <a href="#county-iterate" id="toc-county-iterate">County Iterate</a>
 
 ## Overview
-This script calculates a few landscape and patch metrics as a demonstration.  In this demo, *patches* are individual Florida Counties and the landscape, or surrounding background *matrix*, is a grid.  In addition to the patches and matrix, a few points around the periphery of the couny are shown; these represent seed location for simulations of disease spread.  
-     
-The purpose is to show how different measures can be calculated that reflect county shape and position relative to simulations.    
-   
-The first half of the script walks through spatial data manipulation to extract one county polygon, rasterize it, then calculate metrics.  However, the last section uses the *calc_county_metrics()* function to iterate through all counties in Florida.         
+
+This script calculates a few landscape and patch metrics as a
+demonstration. In this demo, *patches* are individual Florida Counties
+and the landscape, or surrounding background *matrix*, is a grid. In
+addition to the patches and matrix, a few points around the periphery of
+the couny are shown; these represent seed location for simulations of
+disease spread.
+
+The purpose is to show how different measures can be calculated that
+reflect county shape and position relative to simulations.
+
+The first half of the script walks through spatial data manipulation to
+extract one county polygon, rasterize it, then calculate metrics.
+However, the last section uses the *calc_county_metrics()* function to
+iterate through all counties in Florida.
 
 ## Libraries
-```{r, warning=FALSE, message=FALSE, echo=TRUE}
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 library(here) #directory management
 library(tidyverse) #data wrangling
 library(tidyterra) # spatial
@@ -38,10 +50,18 @@ options(tigris_class = "sf", tigris_use_cache = TRUE,
         tigris_progress = FALSE) # to load spatial data using sf
 ```
 
+</details>
+
 ## Prepare County Data
+
 ### Get County Boundaries
+
 Load all US Counties then subset for demo:
-```{r warning=FALSE, message=FALSE}
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 counties_sf <- suppressMessages(counties(cb = TRUE, progress_bar=FALSE))
 
 keep_states <- c("FL")
@@ -52,8 +72,16 @@ counties_demo <- counties(state = keep_states, cb = TRUE)
 length(unique(counties_demo$COUNTYFP))
 ```
 
+</details>
+
+    [1] 67
+
 ### Project and Calc Area
-```{r warning=FALSE, message=FALSE}
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 # US Atlas Equal Area: EPSG:9311
 counties_proj <- st_transform(counties_demo, 9311)
 
@@ -65,8 +93,14 @@ counties_proj <- counties_proj %>%
   mutate(area_km2 = as.numeric(st_area(geometry)) / 1e6)
 ```
 
+</details>
+
 ### View Counties
-```{r fig.height=10, fig.width=10}
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 ggplot(data = counties_proj) +
   geom_sf(aes(fill = area_km2), color = "gray40", size = 0.2) +
   scale_fill_viridis_c("Area (km)", option = "plasma") +
@@ -85,16 +119,34 @@ ggplot(data = counties_proj) +
       plot.title = element_text(size = 22, face = "bold"))
 ```
 
+</details>
+
+![](2025-09-28-landscape_metrics_files/figure-commonmark/unnamed-chunk-4-1.png)
 
 ## Create Grid
-```{r warning=FALSE, message=FALSE}
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 # get largest county
 largest_county <- counties_proj %>%
   slice_max(area_km2, n = 1)
 
 # which county is it?
 largest_county$NAME; largest_county$STATE_NAME
+```
 
+</details>
+
+    [1] "Palm Beach"
+
+    [1] "Florida"
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 # expand by 50 km
 bbox <- st_bbox(largest_county)
 buffer_m <- 50000 # 50 km in meters
@@ -119,10 +171,24 @@ r_template <- rast(ext, resolution = res_m,
 r_template
 ```
 
+</details>
+
+    class       : SpatRaster 
+    dimensions  : 37, 38, 1  (nrow, ncol, nlyr)
+    resolution  : 5053.752, 5054.088  (x, y)
+    extent      : 1849779, 2041822, -1907533, -1720532  (xmin, xmax, ymin, ymax)
+    coord. ref. : NAD27 / US National Atlas Equal Area (EPSG:9311) 
 
 ## Create Seed Locations
-Arbitrary selection of regualrly spaced point locations around the raster.  These are intended to represent seeding locations for disease spread simulations.
-```{r warning=FALSE, message=FALSE}
+
+Arbitrary selection of regualrly spaced point locations around the
+raster. These are intended to represent seeding locations for disease
+spread simulations.
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 res_m <- res(r_template)[1] 
 offset <- res_m * 2 # 2 cells, 10 km inward from edges
 
@@ -162,9 +228,19 @@ sim_origin_pnts <- rbind(north_pts, south_pts, east_pts, west_pts)
 sim_origin_pnts <- st_as_sf(sim_origin_pnts, coords = c("x", "y"), crs = st_crs(r_template))
 ```
 
+</details>
+
 ### View Grid
-Rasterize the largest county to check results. The grid was constructed based on the largest county, so all other counties should fit within it.  The yellow points represent seeding/introduction locations for disease spread simulations.
-```{r fig.width=10, fig.height=10, warning=FALSE, message=FALSE}
+
+Rasterize the largest county to check results. The grid was constructed
+based on the largest county, so all other counties should fit within it.
+The yellow points represent seeding/introduction locations for disease
+spread simulations.
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 palm_bch_fl <- rasterize(vect(largest_county), r_template, 
                         field = 1, background = 0)
 
@@ -200,13 +276,22 @@ ggplot() +
       ) + labs(title = "Palm Beach, FL \n (5km grid)")
 ```
 
+</details>
+
+![](2025-09-28-landscape_metrics_files/figure-commonmark/unnamed-chunk-7-1.png)
 
 ## Metrics
 
-
 ### Patch Metrics
-The *patch* refers to the geometry (area, shape, perimeter length, etc...) bounded by the county polygon.  These measures quantify patch shape and relative position in the grid.  
-```{r warning=FALSE, message=FALSE}
+
+The *patch* refers to the geometry (area, shape, perimeter length, etc…)
+bounded by the county polygon. These measures quantify patch shape and
+relative position in the grid.
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 # get county geo
 geom <- sf::st_geometry(largest_county)[[1]]
 
@@ -246,10 +331,19 @@ rel_centroid_x <- (centroid_xy[1] - ex[1]) / (ex[2] - ex[1])
 rel_centroid_y <- (centroid_xy[2] - ex[3]) / (ex[4] - ex[3])
 ```
 
+</details>
 
 ### Grid Metrics
-Measures below based on the grid created with the county polygon (the *patch*).  The term *matrix* refers to background points, i.e., outside the county and around the *patch*. These measures look at aspects of grid and cell geometry.  
-```{r warning=FALSE, message=FALSE}
+
+Measures below based on the grid created with the county polygon (the
+*patch*). The term *matrix* refers to background points, i.e., outside
+the county and around the *patch*. These measures look at aspects of
+grid and cell geometry.
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 # convert to raster format
 r_rast <- raster::raster(palm_bch_fl)
 vals <- raster::getValues(r_rast)
@@ -266,11 +360,20 @@ area_raster_km2 <- (raster_cell_count * cell_area_m2) / 1e6 # area in km
 # ratio of county cels to background cells
 matrix_cell_count <- sum(is.na(raster::getValues(r_rast))) 
 patch_matrix_ratio <- raster_cell_count/matrix_cell_count
-```   
+```
+
+</details>
 
 ### Simulation Origins
-A few more measures.  These look at the spatial relationship between the *patch* and the locations used to initiate or seed the spread simulations.  
-```{r warning=FALSE, message=FALSE}
+
+A few more measures. These look at the spatial relationship between the
+*patch* and the locations used to initiate or seed the spread
+simulations.
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 # distances from centroid 
 centroid_sfc <- sf::st_sfc(centroid, crs = r_crs_sf)
 centroid_sf <- sf::st_sf(geometry = centroid_sfc)
@@ -291,9 +394,16 @@ dist_to_boundary_km_per_origin <- as.numeric(dist_to_boundary_m) / 1000 # to km
 min_dist_to_boundary_km <- min(dist_to_boundary_km_per_origin) # min of above
 ```
 
+</details>
+
 ### Combine Metrics
+
 Organizing data.
-```{r warning=FALSE, message=FALSE}
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 demo_county_metrics <- tibble(
     area_vec_km2 = area_vec_km2,
     area_vec_m2 = area_vec_m2,
@@ -316,25 +426,57 @@ demo_county_metrics <- tibble(
 data.frame(demo_county_metrics)  
 ```
 
+</details>
+
+      area_vec_km2 area_vec_m2 perimeter_km compactness_pp convex_hull_ratio
+    1      5776.47  5776470130     309.3211      0.7586707         0.9777483
+      bbox_elongation centroid_x centroid_y centroid_rel_x centroid_rel_y
+    1        1.057945    1946937   -1814260      0.5059172      0.4987841
+      raster_cell_count area_raster_km2 patch_matrix_ratio min_dist_to_centroid_km
+    1               226        5772.132          0.1915254                87.59497
+      min_dist_to_boundary_km
+    1                 39.9824
+
 ## County Iterate
-Run the same process on all counties using the *calc_county_metrics()* function.  Note: The *calc_county_metrics()* function creates points representing the simulation seed locations; this will likely need to be modified if the sim locations are pre-existing or determined through other means.
+
+Run the same process on all counties using the *calc_county_metrics()*
+function. Note: The *calc_county_metrics()* function creates points
+representing the simulation seed locations; this will likely need to be
+modified if the sim locations are pre-existing or determined through
+other means.
 
 ### Load Function
-```{r}
-source(here("2025-09-28-landscape-metrics/R/calc_county_metrics.R"))
 
+<details open>
+<summary>Hide code</summary>
+
+``` r
+source(here("2025-09-28-landscape-metrics/R/calc_county_metrics.R"))
 ```
 
+</details>
+
 ### Run Function
-```{r warning=FALSE, message=FALSE}
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 county_mets <- calc_county_metrics(counties_proj, # county polygons
                                    buffer_m = 50000, # buffer in m for fake sim points
                                    res_m = 5000) # cell resolution
-```  
+```
+
+</details>
 
 ### Join Data
-Matching metrics back to original county polygons.  
-```{r}
+
+Matching metrics back to original county polygons.
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 counties_with_mets <- counties_proj %>%
   left_join(county_mets, by = c("NAME" = "county_name", "STATE_NAME" = "state_name"))
 
@@ -357,12 +499,18 @@ metrics_long <- counties_with_mets %>%
   ungroup() %>%
   left_join(counties_proj, by = c("NAME", "STATE_NAME")) %>%
   st_as_sf()
-
 ```
 
+</details>
+
 ### Plot Metrics
-Plot a few metrics for comparison.  
-```{r fig.width=12, fig.height=10}
+
+Plot a few metrics for comparison.
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 ggplot(metrics_long) +
   geom_sf(aes(fill = scaled_value), color = "gray40", size = 0.2) +
   scale_fill_viridis_c("Value", option = "plasma") +
@@ -382,6 +530,8 @@ ggplot(metrics_long) +
       axis.text.y = element_text(size = 10, face = "bold"),
       plot.title = element_text(size = 22, face = "bold")
       ) + labs(title = "Landscape & Patch Metrics")
-
 ```
 
+</details>
+
+![](2025-09-28-landscape_metrics_files/figure-commonmark/unnamed-chunk-15-1.png)
