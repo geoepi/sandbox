@@ -12,10 +12,9 @@ editor: source
 editor_options: 
   chunk_output_type: console
 ---
-
-## Notes and Links
-
-
+  
+## Notes and Links  
+  
 OSF Website: https://osf.io/  
   
 **R-Package** for OSF: [R-osfr](https://docs.ropensci.org/osfr/)  
