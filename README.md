@@ -16,6 +16,8 @@ Everyone is welcome to use the Sandbox, no Pull Requests (PR) required. But, ple
   
 5.  [2024-09-08_osf_geospatial](https://github.com/geoepi/sandbox/blob/main/2024-09-08-osf_geospatial/read_flaps_data.md): Walk through of steps to import FLAPS data from OSF and plot farm locations.
 6.  [2025-04-16-git_from_atlas](https://github.com/geoepi/sandbox/blob/main/2025-04-16-git_from_atlas.md): Steps to connect Atlas HPC and GitHub.     
-7.  [2025-09-28-landscape_metrics](https://github.com/geoepi/sandbox/blob/main/2025-09-28-landscape-metrics/2025-09-28-landscape_metrics.md): Demo of calculating landscape and patch metrics for U.S. Counties.   
+7.  [2025-09-28-landscape_metrics](https://github.com/geoepi/sandbox/blob/main/2025-09-28-landscape-metrics/2025-09-28-landscape_metrics.md): Demo of calculating landscape and patch metrics for U.S. Counties.  
+8.  [2025-11-23-fmd_sympoisum_map](https://github.com/geoepi/sandbox/blob/main/2025-11-23-fmd_symposium_map/symposium_map.R): Script to produce origin of country for FMD Symposium attendees.  
+ 
   
   
