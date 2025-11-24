@@ -106,8 +106,8 @@ set.seed(1223) # there's random jitter in label positions
 # base map
 col.pal<-brewer.pal(n=4, name="Paired") # ** colorblind-friendly color palette
 p <- ggplot(world_flagged) +
-  geom_sf(data = ocean, fill = col.pal[1]) + # ** plot ocean and fill from palette
-  geom_sf(aes(fill = attended), color = "gray60", size = 0.1) +
+  geom_sf(data = ocean, fill = col.pal[1], alpha=0.7) + # ** plot ocean and fill from palette
+  geom_sf(aes(fill = attended), color = "gray50", size = 0.1) +
   scale_fill_manual(values = c("Yes" = col.pal[4], "No" = "gray95")) + # ** new "yes" fill from palette
   coord_sf(
     label_graticule = "all",
@@ -116,8 +116,8 @@ p <- ggplot(world_flagged) +
   ) +
   theme_minimal(base_size = 11) +
   theme(
-    panel.grid.major = element_line(color = "gray80", linewidth = 0.2),
-    panel.grid.minor = element_line(color = "gray90", linewidth = 0.1),
+    panel.grid.major = element_line(color = "gray60", linewidth = 0.3),
+    panel.grid.minor = element_line(color = "gray70", linewidth = 0.15),
     legend.position = "none",
     legend.title = element_blank(),
     axis.title = element_blank(),
