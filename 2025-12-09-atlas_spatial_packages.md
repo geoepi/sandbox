@@ -17,8 +17,10 @@ module load udunits
 module load gdal
 module load proj
 module load geos
-module load curl
+module load curl # see note below
 ```
+
+Note that 'module load curl' is no longer recommended by SCInet IT in ATLAS as R uses the system curl, so loading an independent one can cause issues in specific instances.
 
 ## Load r/4.5
 ```
@@ -31,7 +33,7 @@ R --vanilla --no-save
 ```
 
 ## Install **units** package
-Need to install this dependency firt
+Need to install this dependency first
 ```
 install.packages("units", configure.args="--with-udunits2-lib=$UDUNITS_ROOT/lib --with-udunits2-include=$UDUNITS_ROOT/include")
 ```
@@ -69,6 +71,8 @@ If not done automatically during base r-INLA install
 ```
 inla.binary.install()
 ```
+
+As of January 2026, SCInet IT advises to pick the binary install alternative that includes 'Rocky linux 9.x'.
 
 
 ## That should be it!
