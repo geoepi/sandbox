@@ -19,6 +19,8 @@ Everyone is welcome to use the Sandbox, no Pull Requests (PR) required. But, ple
 7.  [2025-09-28-landscape_metrics](https://github.com/geoepi/sandbox/blob/main/2025-09-28-landscape-metrics/2025-09-28-landscape_metrics.md): Demo of calculating landscape and patch metrics for U.S. Counties.  
 8.  [2025-11-23-fmd_sympoisum_map](https://github.com/geoepi/sandbox/blob/main/2025-11-23-fmd_symposium_map/symposium_map.R): Script to produce origin of country for FMD Symposium attendees.
 9.  [2025-12-09-atlas_spatial_packages](https://github.com/geoepi/sandbox/blob/main/2025-12-09-atlas_spatial_packages.md): Instruction to install **terra** and **sf** spatial packages, and **r-INLA** post Atlas's Oct 2025 updates.
+9.  [2026-04-10-maps_in_r](https://github.com/geoepi/sandbox/blob/main/2025-12-09-atlas_spatial_packages.md): Example map plotting using ggplot.
+
    
  
   
