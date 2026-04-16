@@ -6,6 +6,8 @@ SciNet HPC Overview
   Resources</a>
 - <a href="#discussion-topics" id="toc-discussion-topics">Discussion
   Topics</a>
+- <a href="#interactive-sessions"
+  id="toc-interactive-sessions">Interactive Sessions</a>
 - <a href="#terminal-command-line" id="toc-terminal-command-line">Terminal
   (command line)</a>
 - <a href="#submit-batch" id="toc-submit-batch">Submit Batch</a>
@@ -83,6 +85,8 @@ Link: https://scinet.usda.gov/events
     HPCs and your local machine.  
 5.  Select files, click `Start ->` arrow button to transfer
 
+## Interactive Sessions
+
 ## Terminal (command line)
 
 1.  Open terminals  
@@ -95,21 +99,3 @@ Link: https://scinet.usda.gov/events
     will install the package in your **Home** directory.
 
 ## Submit Batch
-
-1.  Example in this directory to run a linear regression using
-    *lm()*. A.
-    [test_lm.sh](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/test_lm.sh):
-    Unix shell script listing rquested HPC resources and filename of
-    script to run.  
-    B.
-    [run_on_hpc.R](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/run_on_hpc.R):
-    R-script with code to load data, run model, and save results.  
-    C.
-    [test_data.rds](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/test_data.rds):
-    Example data to perform regression.  
-    D.
-    [demo_script_lm.R](https://github.com/geoepi/sandbox/blob/main/2024-08-06-informal_training/demo_script_lm.R):
-    R-Script used to generate and save *test_data.rds*  
-2.  Open terminal  
-3.  Navigate to desired working directory.  
-4.  Submit the shell script using `sbatch test_lm.sh`
