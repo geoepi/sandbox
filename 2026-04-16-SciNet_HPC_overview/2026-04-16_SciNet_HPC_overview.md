@@ -8,9 +8,8 @@ SciNet HPC Overview
   Topics</a>
 - <a href="#interactive-sessions"
   id="toc-interactive-sessions">Interactive Sessions</a>
-- <a href="#terminal-command-line" id="toc-terminal-command-line">Terminal
-  (command line)</a>
-- <a href="#submit-batch" id="toc-submit-batch">Submit Batch</a>
+- <a href="#submit-batch-job-to-slurm"
+  id="toc-submit-batch-job-to-slurm">Submit Batch Job to SLURM</a>
 
 ## Linked Resources
 
@@ -50,29 +49,26 @@ Link: https://scinet.usda.gov/events
 
 ### Login and Directories
 
-1.  Login to OnDemand (try both Atlas and Ceres)  
-    A. Use of PIV card now preferred, but ssh from PowerShell possible  
-    B. Note: Tabs across top of page to access interactive GUI\`s,
-    Files, and terminals.  
-2.  `Files` tab: Navigable directory via web interface  
-    A. Find, create, and create directories  
-    B. `Upload` and `Download` options (click, drag, and drop style)  
-    C. Web interface good for smaller data, Globus recommended for big
-    data  
-3.  Where to save, keep, and archive data?  
-    A. **Home** directory: Very small storage, good for individual
-    software installs  
-    B. **Project** directories: Project-specific, look at
-    *disease_ecology*, *hpai_plume*, *fadru_fmd*, etc as examples.  
-    i. Same project names used on Ceres, Atlas, and Juno  
-    ii. Size determined by P.I.’s, may be increased as needed  
-    iii. This is where computational work is performed  
-    C. **90daydata** directory: includes a project-specific directory
-    *unlimited* storage, but deleted after 90days of being idle.  
-    i. Best place for staging big data prior to prepossessing  
-    ii. Pull it into the **Project** directory as needed.  
-    D. **Juno** directory: Long-term data archiving. Typically used when
-    project is complete to create enduring data record.
+1.  Login to OnDemand (try both Atlas and Ceres) A. Use of PIV card now
+    preferred, but ssh from PowerShell possible B. Note: Tabs across top
+    of page to access interactive GUIs, Files, and terminals.
+2.  `Files` tab: Navigable directory via web interface A. Find, create,
+    and create directories B. `Upload` and `Download` options (click,
+    drag, and drop style) C. Web interface good for smaller data, Globus
+    recommended for big data
+3.  Where to save, keep, and archive data? A. **Home** directory: Very
+    small storage, good for individual software installs B. **Project**
+    directories: Project-specific, look at *disease_ecology*,
+    *hpai_plume*, *fadru_fmd*, etc as examples.
+    1.  Same project names used on Ceres, Atlas, and Juno
+    2.  Size determined by P.I.’s, may be increased as needed
+    3.  This is where computational work is performed C. **90daydata**
+        directory: includes a project-specific directory *unlimited*
+        storage, but deleted after 90days of being idle.
+    4.  Best place for staging big data prior to prepossessing
+    5.  Pull it into the **Project** directory as needed. D. **Juno**
+        directory: Long-term data archiving. Typically used when project
+        is complete to create enduring data record.
 
 ### Globus
 
@@ -87,7 +83,9 @@ Link: https://scinet.usda.gov/events
 
 ## Interactive Sessions
 
-## Terminal (command line)
+Check Apps for RStudio, JupyterLab Server, VSCode, etc…
+
+### Terminal (command line)
 
 1.  Open terminals  
 2.  Navigate and create directories  
@@ -98,4 +96,22 @@ Link: https://scinet.usda.gov/events
 7.  Install packages. If asked, reply *yes* to use a new directory. This
     will install the package in your **Home** directory.
 
-## Submit Batch
+## Submit Batch Job to SLURM
+
+Work through [these
+commands](https://github.com/geoepi/sandbox/blob/main/2026-04-16-SciNet_HPC_overview/2026-04-16_command-line-quickstart.md)
+to submit a batch job:
+
+1.  Ensure the `simdat.R`, `run_model.R`, and `simdat.sh` files are in
+    your current working directory.
+2.  `sbatch simdat.sh`: Submits the simulation script to the cluster.
+    - This will generate a file named `data_2026-04-16.csv` in your
+      directory.
+3.  Use `nano simdat.sh` to edit the shell script:
+    - Find the line: `Rscript --no-save --no-restore simdat.R`
+    - Change it to: `Rscript --no-save --no-restore run_model.R`
+    - *(Optional)*: Change `#SBATCH --job-name=sim` to
+      `#SBATCH --job-name=model`
+4.  `sbatch simdat.sh`: Run the command again to submit the model
+    script.
+    - This will write `model_output.RData` to the directory.
