@@ -1,6 +1,19 @@
-# HPC Quick Start: Command Line
-
-Commands for navigating and managing files on a Linux-based HPC cluster.
+---
+title: "HPC Quick Start: Command Line"
+Description: "Commands for navigating and managing files on a Linux-based HPC cluster."
+date: "2026-04-16"
+about:
+  template: marquee
+format: 
+   gfm:
+     toc: true
+     toc-depth: 2
+     code-fold: show
+     code-summary: "Hide code"
+     preview-mode: raw
+editor_options: 
+  chunk_output_type: console
+---  
 
 ## 1. Navigating the File System
 The HPC environment is organized in a tree-like directory structure.
