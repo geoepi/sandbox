@@ -72,7 +72,7 @@ The workflow uses three files:
 | [`simdat.sh`](examples/simdat.sh)     | Requests Slurm resources, loads modules, and initially runs `simdat.R`.                   |
 
 The example files are available in the same folder as this demo
-[`2026-04-16-SciNet_HPC_overview`](https://github.com/geoepi/sandbox/tree/main/2026-08-03-submit_slurm)
+[`2026-08-03-submit_slurm`](https://github.com/geoepi/sandbox/tree/main/2026-08-03-submit_slurm)
 directory on GitHub.
 
 ## 1. Log in to Atlas Open OnDemand
