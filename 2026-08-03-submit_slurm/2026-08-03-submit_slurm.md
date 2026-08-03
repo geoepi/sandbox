@@ -101,15 +101,32 @@ In the file browser, select **Change directory**. Enter:
 
 Select **OK**.
 
-![Change the file browser to the disease_ecology project
-directory](figures/fig_2.png)
+<details open>
+<summary>Hide code</summary>
+
+``` r
+knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_2.png"))
+```
+
+</details>
+
+![](figures/fig_2.PNG)
 
 ## 3. Create a working directory
 
 Select **New Directory** and enter a directory name. The notes use
 `mytest-john`; use any unique and informative name.
 
-![Create a new working directory](figures/fig_3.png)
+<details open>
+<summary>Hide code</summary>
+
+``` r
+knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_3.png"))
+```
+
+</details>
+
+![](figures/fig_3.PNG)
 
 Open the new directory after it is created.
 
@@ -124,7 +141,16 @@ the following files into the upload window:
 
 Select **Upload** to finish.
 
-![Upload the three example files](figures/fig_4.png)
+<details open>
+<summary>Hide code</summary>
+
+``` r
+knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_4.png"))
+```
+
+</details>
+
+![](figures/fig_4.PNG)
 
 The working directory should now contain all three files.
 
@@ -133,7 +159,16 @@ The working directory should now contain all three files.
 Select **Open in Terminal** from the file browser toolbar. The terminal
 should open in the current working directory.
 
-![Open a terminal in the current directory](figures/fig_5.png)
+<details open>
+<summary>Hide code</summary>
+
+``` r
+knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_5.png"))
+```
+
+</details>
+
+![](figures/fig_5.PNG)
 
 Confirm the location and files:
 
