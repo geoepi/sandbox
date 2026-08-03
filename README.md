@@ -21,6 +21,8 @@ Everyone is welcome to use the Sandbox, no Pull Requests (PR) required. But, ple
 9.  [2025-12-09-atlas_spatial_packages](https://github.com/geoepi/sandbox/blob/main/2025-12-09-atlas_spatial_packages.md): Instruction to install **terra** and **sf** spatial packages, and **r-INLA** post Atlas's Oct 2025 updates.
 10.  [2026-04-10-maps_in_r](https://github.com/geoepi/sandbox/blob/main/2026-04-10-maps_in_r/map_plots.md): Example map plotting using ggplot.  
 11.  [2026-04-16-SciNet_HPC_overview](https://github.com/geoepi/sandbox/tree/main/2026-04-16-SciNet_HPC_overview): Notes on HPC use and example job submission.  
+12.  [2026-08-03-submit_slurm](https://github.com/geoepi/sandbox/blob/main/2026-08-03-submit_slurm/2026-08-03-submit_slurm.md): Tutorial for SLURM job submission.    
+
 
 
    
