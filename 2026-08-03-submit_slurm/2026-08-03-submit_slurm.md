@@ -71,23 +71,14 @@ The workflow uses three files:
 | [`run_model.R`](examples/run_model.R) | Reads the CSV file, fits `lm(y ~ x)`, and saves the fitted model as `model_output.RData`. |
 | [`simdat.sh`](examples/simdat.sh)     | Requests Slurm resources, loads modules, and initially runs `simdat.R`.                   |
 
-The example files are also available in the
-[`2026-04-16-SciNet_HPC_overview`](https://github.com/geoepi/sandbox/tree/main/2026-04-16-SciNet_HPC_overview)
+The example files are available in the same folder as this demo
+[`2026-04-16-SciNet_HPC_overview`](https://github.com/geoepi/sandbox/tree/main/2026-08-03-submit_slurm)
 directory on GitHub.
 
 ## 1. Log in to Atlas Open OnDemand
 
 Log in to the Atlas Open OnDemand interface. From the top navigation
 bar, select **Files**, then select **/project**.
-
-<details open>
-<summary>Hide code</summary>
-
-``` r
-knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_1.png"))
-```
-
-</details>
 
 ![](figures/fig_1.PNG)
 
@@ -101,30 +92,12 @@ In the file browser, select **Change directory**. Enter:
 
 Select **OK**.
 
-<details open>
-<summary>Hide code</summary>
-
-``` r
-knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_2.png"))
-```
-
-</details>
-
 ![](figures/fig_2.PNG)
 
 ## 3. Create a working directory
 
 Select **New Directory** and enter a directory name. The notes use
 `mytest-john`; use any unique and informative name.
-
-<details open>
-<summary>Hide code</summary>
-
-``` r
-knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_3.png"))
-```
-
-</details>
 
 ![](figures/fig_3.PNG)
 
@@ -141,15 +114,6 @@ the following files into the upload window:
 
 Select **Upload** to finish.
 
-<details open>
-<summary>Hide code</summary>
-
-``` r
-knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_4.png"))
-```
-
-</details>
-
 ![](figures/fig_4.PNG)
 
 The working directory should now contain all three files.
@@ -158,15 +122,6 @@ The working directory should now contain all three files.
 
 Select **Open in Terminal** from the file browser toolbar. The terminal
 should open in the current working directory.
-
-<details open>
-<summary>Hide code</summary>
-
-``` r
-knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_5.png"))
-```
-
-</details>
 
 ![](figures/fig_5.PNG)
 

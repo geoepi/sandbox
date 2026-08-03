@@ -42,13 +42,13 @@ The workflow uses three files:
 | [`run_model.R`](examples/run_model.R) | Reads the CSV file, fits `lm(y ~ x)`, and saves the fitted model as `model_output.RData`. |
 | [`simdat.sh`](examples/simdat.sh) | Requests Slurm resources, loads modules, and initially runs `simdat.R`. |
 
-The example files are also available in the [`2026-04-16-SciNet_HPC_overview`](https://github.com/geoepi/sandbox/tree/main/2026-04-16-SciNet_HPC_overview) directory on GitHub.
+The example files are available in the same folder as this demo   [`2026-04-16-SciNet_HPC_overview`](https://github.com/geoepi/sandbox/tree/main/2026-08-03-submit_slurm) directory on GitHub.
 
 ## 1. Log in to Atlas Open OnDemand
 
 Log in to the Atlas Open OnDemand interface. From the top navigation bar, select **Files**, then select **/project**.
 
-```{r}
+```{r echo=FALSE}
 knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_1.png"))
 ```
 
@@ -62,7 +62,7 @@ In the file browser, select **Change directory**. Enter:
 
 Select **OK**.
 
-```{r}
+```{r echo=FALSE}
 knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_2.png"))
 ```
 
@@ -71,7 +71,7 @@ knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_2.png"))
 Select **New Directory** and enter a directory name. The notes use `mytest-john`; use any unique and informative name.
 
 
-```{r}
+```{r echo=FALSE}
 knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_3.png"))
 ```
 
@@ -88,7 +88,7 @@ Select **Upload** in the upper-right corner of the file browser. Drag the follow
 Select **Upload** to finish.
 
 
-```{r}
+```{r echo=FALSE}
 knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_4.png"))
 ```
 
@@ -99,7 +99,7 @@ The working directory should now contain all three files.
 Select **Open in Terminal** from the file browser toolbar. The terminal should open in the current working directory.
 
 
-```{r}
+```{r echo=FALSE}
 knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_5.png"))
 ```
 
