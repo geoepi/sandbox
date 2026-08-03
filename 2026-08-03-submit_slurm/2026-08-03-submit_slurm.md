@@ -80,8 +80,16 @@ directory on GitHub.
 Log in to the Atlas Open OnDemand interface. From the top navigation
 bar, select **Files**, then select **/project**.
 
-![Open the project filesystem from the Files
-menu](2026-08-03-submit_slurm/figures/fig_1.png)
+<details open>
+<summary>Hide code</summary>
+
+``` r
+knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_1.png"))
+```
+
+</details>
+
+![](figures/fig_1.PNG)
 
 ## 2. Navigate to the project directory
 
@@ -94,15 +102,14 @@ In the file browser, select **Change directory**. Enter:
 Select **OK**.
 
 ![Change the file browser to the disease_ecology project
-directory](2026-08-03-submit_slurm/figures/fig_2.png)
+directory](figures/fig_2.png)
 
 ## 3. Create a working directory
 
 Select **New Directory** and enter a directory name. The notes use
 `mytest-john`; use any unique and informative name.
 
-![Create a new working
-directory](2026-08-03-submit_slurm/figures/fig_3.png)
+![Create a new working directory](figures/fig_3.png)
 
 Open the new directory after it is created.
 
@@ -117,8 +124,7 @@ the following files into the upload window:
 
 Select **Upload** to finish.
 
-![Upload the three example
-files](2026-08-03-submit_slurm/figures/fig_4.png)
+![Upload the three example files](figures/fig_4.png)
 
 The working directory should now contain all three files.
 
@@ -127,8 +133,7 @@ The working directory should now contain all three files.
 Select **Open in Terminal** from the file browser toolbar. The terminal
 should open in the current working directory.
 
-![Open a terminal in the current
-directory](2026-08-03-submit_slurm/figures/fig_5.png)
+![Open a terminal in the current directory](figures/fig_5.png)
 
 Confirm the location and files:
 

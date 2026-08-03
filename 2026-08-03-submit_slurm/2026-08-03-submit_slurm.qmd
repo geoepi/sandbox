@@ -14,7 +14,10 @@ format:
 editor_options: 
   chunk_output_type: console
 ---  
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(here)
 
+```
 
 
 # Submitting a Simple R Job with Slurm on Atlas
@@ -45,7 +48,9 @@ The example files are also available in the [`2026-04-16-SciNet_HPC_overview`](h
 
 Log in to the Atlas Open OnDemand interface. From the top navigation bar, select **Files**, then select **/project**.
 
-![Open the project filesystem from the Files menu](figures/fig_1.png)
+```{r}
+knitr::include_graphics(here("2026-08-03-submit_slurm/figures/fig_1.png"))
+```
 
 ## 2. Navigate to the project directory
 
