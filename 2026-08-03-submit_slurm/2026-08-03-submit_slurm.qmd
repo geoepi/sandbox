@@ -14,3 +14,477 @@ format:
 editor_options: 
   chunk_output_type: console
 ---  
+
+
+
+# Submitting a Simple R Job with Slurm on Atlas
+
+This tutorial demonstrates a two-stage Slurm workflow:
+
+1. Submit `simdat.R` to generate a CSV file.
+2. Inspect the generated data in an interactive R session.
+3. Edit the existing batch script with `nano` so that it runs `run_model.R`.
+4. Submit the revised batch script to fit a linear model.
+5. Load and inspect the saved model in an interactive R session.
+
+The example uses the `disease_ecology` project allocation and the Atlas `r/4.5` module. Replace the project name or module version where required for another allocation or system.
+
+## Example files
+
+The workflow uses three files:
+
+| File | Purpose |
+|---|---|
+| [`simdat.R`](examples/simdat.R) | Generates 1,000 simulated observations and writes `data_2026-08-03.csv`. |
+| [`run_model.R`](examples/run_model.R) | Reads the CSV file, fits `lm(y ~ x)`, and saves the fitted model as `model_output.RData`. |
+| [`simdat.sh`](examples/simdat.sh) | Requests Slurm resources, loads modules, and initially runs `simdat.R`. |
+
+The example files are also available in the [`2026-04-16-SciNet_HPC_overview`](https://github.com/geoepi/sandbox/tree/main/2026-04-16-SciNet_HPC_overview) directory on GitHub.
+
+## 1. Log in to Atlas Open OnDemand
+
+Log in to the Atlas Open OnDemand interface. From the top navigation bar, select **Files**, then select **/project**.
+
+![Open the project filesystem from the Files menu](figures/fig_1.png)
+
+## 2. Navigate to the project directory
+
+In the file browser, select **Change directory**. Enter:
+
+```text
+/project/disease_ecology
+```
+
+Select **OK**.
+
+![Change the file browser to the disease_ecology project directory](figures/fig_2.png)
+
+## 3. Create a working directory
+
+Select **New Directory** and enter a directory name. The notes use `mytest-john`; use any unique and informative name.
+
+![Create a new working directory](figures/fig_3.png)
+
+Open the new directory after it is created.
+
+## 4. Upload the example files
+
+Select **Upload** in the upper-right corner of the file browser. Drag the following files into the upload window:
+
+- `simdat.R`
+- `run_model.R`
+- `simdat.sh`
+
+Select **Upload** to finish.
+
+![Upload the three example files](figures/fig_4.png)
+
+The working directory should now contain all three files.
+
+## 5. Open a terminal
+
+Select **Open in Terminal** from the file browser toolbar. The terminal should open in the current working directory.
+
+![Open a terminal in the current directory](figures/fig_5.png)
+
+Confirm the location and files:
+
+```bash
+pwd
+ls -lh
+```
+
+The output should show the working directory and the three uploaded files.
+
+## 6. Start an interactive development session
+
+Run the development-session command shown in the notes:
+
+```bash
+srun --account=disease_ecology \
+  --partition=development \
+  --nodes=1 \
+  --ntasks=16 \
+  --pty bash
+```
+
+Wait until Slurm allocates the resources. The hostname in the prompt should change from an Atlas login node to an Atlas development node, for example:
+
+```text
+[john.humphreys@atlas-devel-1 mytest-john]$
+```
+
+Confirm that the current directory still contains the example files:
+
+```bash
+pwd
+ls -lh
+```
+
+## 7. Submit the data-generation job
+
+Submit the batch script:
+
+```bash
+sbatch simdat.sh
+```
+
+A successful submission returns a numeric job identifier:
+
+```text
+Submitted batch job 20457490
+```
+
+Record the job identifier. The examples below use a shell variable so the output file can be referenced consistently:
+
+```bash
+JOBID=20457490
+```
+
+Replace `20457490` with the identifier returned for the actual job.
+
+### Correct Windows line endings when necessary
+
+Files uploaded from Windows may contain DOS/Windows line endings. In that case, `sbatch` reports:
+
+```text
+sbatch: error: Batch script contains DOS line breaks (\r\n)
+sbatch: error: instead of expected UNIX line breaks (\n).
+```
+
+Convert the batch script to Unix line endings and resubmit it:
+
+```bash
+dos2unix simdat.sh
+sbatch simdat.sh
+```
+
+Update `JOBID` with the identifier from the successful submission.
+
+## 8. Monitor the job
+
+List the user's active jobs:
+
+```bash
+squeue -u "$USER"
+```
+
+Common state codes include:
+
+- `PD`: pending
+- `R`: running
+
+The job will disappear from `squeue` after it finishes. The example scripts include a 30-second delay, so the jobs should remain visible briefly.
+
+## 9. Check the data-generation results
+
+List the directory contents after the job finishes:
+
+```bash
+ls -lh
+```
+
+The directory should now contain:
+
+```text
+data_2026-08-03.csv
+run_model.R
+simdat.R
+simdat.sh
+slurm-20457490.out
+```
+
+The Slurm output filename uses the job identifier. Inspect it with:
+
+```bash
+cat "slurm-${JOBID}.out"
+```
+
+The final message should be:
+
+```text
+[1] "Data generation complete!"
+```
+
+Verify that the CSV file is present and nonempty:
+
+```bash
+ls -lh data_2026-08-03.csv
+head data_2026-08-03.csv
+```
+
+## 10. Inspect the generated data in an interactive R session
+
+Load R and start an interactive session:
+
+```bash
+module load r/4.5
+R
+```
+
+At the R prompt, read and inspect the data:
+
+```r
+mydata <- read.csv("data_2026-08-03.csv")
+
+dim(mydata)
+head(mydata)
+summary(mydata)
+```
+
+`dim(mydata)` should return 1,000 rows and 2 columns:
+
+```text
+[1] 1000    2
+```
+
+The first six rows should begin as follows because `simdat.R` uses `set.seed(123)`:
+
+```text
+            x           y
+1 -0.56047565 -0.99579872
+2 -0.23017749 -1.03995504
+3  1.55870831 -0.01798024
+4  0.07050839 -0.13217513
+5  0.12928774 -2.54934277
+6  1.71506499  1.04057346
+```
+
+Exit R without saving a workspace image:
+
+```r
+q()
+```
+
+Enter `n` when R asks:
+
+```text
+Save workspace image? [y/n/c]: n
+```
+
+## 11. Edit the batch script with `nano`
+
+The data file now exists. Modify `simdat.sh` so that the next Slurm job runs `run_model.R` instead of `simdat.R`.
+
+Open the script:
+
+```bash
+nano simdat.sh
+```
+
+Make two edits.
+
+First, change the job name from:
+
+```bash
+#SBATCH --job-name=simdat
+```
+
+to:
+
+```bash
+#SBATCH --job-name=run_model
+```
+
+Second, change the final command from:
+
+```bash
+Rscript --no-save --no-restore simdat.R
+```
+
+to:
+
+```bash
+Rscript --no-save --no-restore run_model.R
+```
+
+Save and close the file:
+
+1. Press `Ctrl+O` to write the file.
+2. Press `Enter` to confirm the filename.
+3. Press `Ctrl+X` to exit `nano`.
+
+Confirm the edited lines:
+
+```bash
+grep -nE 'job-name|Rscript' simdat.sh
+```
+
+The result should resemble:
+
+```text
+2:#SBATCH --job-name=run_model
+23:Rscript --no-save --no-restore run_model.R
+```
+
+Line numbers may differ if the script was otherwise edited.
+
+## 12. Submit the model job
+
+Submit the revised batch script:
+
+```bash
+sbatch simdat.sh
+```
+
+Record the new job identifier:
+
+```text
+Submitted batch job 20457500
+```
+
+Store it separately from the data-generation job identifier:
+
+```bash
+MODEL_JOBID=20457500
+```
+
+Replace `20457500` with the actual identifier.
+
+Monitor the job:
+
+```bash
+squeue -u "$USER"
+```
+
+Do not proceed until the model job has finished.
+
+## 13. Check the model-job results
+
+List the directory contents:
+
+```bash
+ls -lh
+```
+
+The directory should now include:
+
+```text
+model_output.RData
+slurm-20457500.out
+```
+
+Inspect the batch output:
+
+```bash
+cat "slurm-${MODEL_JOBID}.out"
+```
+
+The output should contain both:
+
+```text
+[1] "Linear model analysis complete!"
+```
+
+and the printed result from:
+
+```r
+summary(model)
+```
+
+The model summary should include the model call, residual summary, coefficient table, residual standard error, R-squared values, and F-statistic.
+
+Verify that the saved model file exists and is nonempty:
+
+```bash
+ls -lh model_output.RData
+```
+
+## 14. Inspect the linear-model results interactively
+
+Start R again if it is no longer running:
+
+```bash
+module load r/4.5
+R
+```
+
+Load the saved workspace object and inspect the fitted model:
+
+```r
+load("model_output.RData")
+
+ls()
+class(model)
+summary(model)
+coef(model)
+```
+
+Expected structural checks are:
+
+```text
+[1] "model"
+[1] "lm"
+```
+
+`summary(model)` should reproduce the linear-model results printed in the second Slurm output file. `coef(model)` should return an intercept and a coefficient for `x`.
+
+Exit R without saving another workspace image:
+
+```r
+q()
+```
+
+Enter `n` when prompted.
+
+## 15. Completion check
+
+The tutorial is complete when the working directory contains all of the following:
+
+```text
+simdat.R
+run_model.R
+simdat.sh
+data_2026-08-03.csv
+model_output.RData
+slurm-<data-job-id>.out
+slurm-<model-job-id>.out
+```
+
+Both Slurm output files should show successful completion, and the CSV data and fitted `lm` object should have been inspected in interactive R sessions.
+
+## Troubleshooting
+
+### `Batch script contains DOS line breaks`
+
+Run:
+
+```bash
+dos2unix simdat.sh
+```
+
+Then resubmit the script.
+
+### `cannot open file 'data_2026-08-03.csv'`
+
+The model job cannot find the data file. Confirm that:
+
+```bash
+pwd
+ls -lh data_2026-08-03.csv
+```
+
+The model job must be submitted from the same directory containing the CSV file, unless the scripts are changed to use explicit paths.
+
+### The job no longer appears in `squeue`
+
+A completed job is removed from the active queue. Check the corresponding Slurm output file:
+
+```bash
+ls -lt slurm-*.out
+cat "slurm-${JOBID}.out"
+```
+
+### No `model_output.RData` file was created
+
+Inspect the model job's output file for an R error:
+
+```bash
+cat "slurm-${MODEL_JOBID}.out"
+```
+
+Also confirm that `simdat.sh` runs `run_model.R`:
+
+```bash
+grep -n 'Rscript' simdat.sh
+```
