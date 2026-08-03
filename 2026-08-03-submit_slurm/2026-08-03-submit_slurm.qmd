@@ -1,0 +1,16 @@
+---
+title: "Submitting a SLURM Job on Atlas"
+Description: "Commands for submitting an R analysis on Atlas."
+date: "2026-08-03"
+about:
+  template: marquee
+format: 
+   gfm:
+     toc: true
+     toc-depth: 2
+     code-fold: show
+     code-summary: "Hide code"
+     preview-mode: raw
+editor_options: 
+  chunk_output_type: console
+---  

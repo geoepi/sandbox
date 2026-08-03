@@ -50,3 +50,4 @@ rsconnect/
 
 # private local folder
 /local
+.positai
