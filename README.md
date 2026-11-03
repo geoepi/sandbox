@@ -22,7 +22,7 @@ Everyone is welcome to use the Sandbox, no Pull Requests (PR) required. But, ple
 10.  [2026-04-10-maps_in_r](https://github.com/geoepi/sandbox/blob/main/2026-04-10-maps_in_r/map_plots.md): Example map plotting using ggplot.  
 11.  [2026-04-16-SciNet_HPC_overview](https://github.com/geoepi/sandbox/tree/main/2026-04-16-SciNet_HPC_overview): Notes on HPC use and example job submission.  
 12.  [2026-08-03-submit_slurm](https://github.com/geoepi/sandbox/blob/main/2026-08-03-submit_slurm/2026-08-03-submit_slurm.md): Tutorial for SLURM job submission.
-13.  [2026-11-03-persistence_gam](https://github.com/geoepi/sandbox): Demonstrative GAM for HPAI pathogen environmental persistence.  
+13.  [2026-11-03-persistence_gam](https://github.com/geoepi/sandbox/blob/main/2026-11-03-persistence_gam/2026-11-03-persistence_gam.md): Demonstrative GAM for HPAI pathogen environmental persistence.  
 
 
 

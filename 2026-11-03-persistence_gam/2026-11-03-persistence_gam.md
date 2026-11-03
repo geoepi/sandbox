@@ -41,109 +41,16 @@ based on temperature and pH values from literature.
 library(readxl) # read excel file
 library(readr) # read excel from link
 library(dplyr) # data wrangling
-```
-
-</details>
-
-
-    Attaching package: 'dplyr'
-
-    The following objects are masked from 'package:stats':
-
-        filter, lag
-
-    The following objects are masked from 'package:base':
-
-        intersect, setdiff, setequal, union
-
-<details open>
-<summary>Hide code</summary>
-
-``` r
 library(tidyr) # data wrangling
 library(here) # directory path management
-```
-
-</details>
-
-    here() starts at D:/Github/sandbox
-
-<details open>
-<summary>Hide code</summary>
-
-``` r
 library(ggplot2) # plotting
 library(mgcv) # fitting mixed models, using non-linear variables
-```
-
-</details>
-
-    Loading required package: nlme
-
-
-    Attaching package: 'nlme'
-
-    The following object is masked from 'package:dplyr':
-
-        collapse
-
-    This is mgcv 1.9-3. For overview type 'help("mgcv-package")'.
-
-<details open>
-<summary>Hide code</summary>
-
-``` r
 library(scales) # plotting/transforms
-```
-
-</details>
-
-
-    Attaching package: 'scales'
-
-    The following object is masked from 'package:readr':
-
-        col_factor
-
-<details open>
-<summary>Hide code</summary>
-
-``` r
 library(terra) # spatial data
-```
-
-</details>
-
-    terra 1.8.42
-
-
-    Attaching package: 'terra'
-
-    The following object is masked from 'package:scales':
-
-        rescale
-
-    The following object is masked from 'package:tidyr':
-
-        extract
-
-<details open>
-<summary>Hide code</summary>
-
-``` r
 library(ambient) # create spatial clusters (less boring rasters)
 ```
 
 </details>
-
-    Warning: package 'ambient' was built under R version 4.5.3
-
-
-    Attaching package: 'ambient'
-
-    The following objects are masked from 'package:terra':
-
-        rotate, stretch
 
 ## Random Seed
 
@@ -735,6 +642,8 @@ p_ph +
 
 ### pH in Space
 
+Now for the raster version.
+
 <details open>
 <summary>Hide code</summary>
 
@@ -825,12 +734,13 @@ ggplot(as.data.frame(ph_persist.r, xy = TRUE), aes(x = x, y = y, fill = lyr.1)) 
 
 ## Joint Temperature and pH Model
 
+Put both predictors in a common model.
+
 <details open>
 <summary>Hide code</summary>
 
 ``` r
 # joint dataset
-
 ref_ph_scale <- ph_response_17(7.2) # pH 7.2, relative scaling applied
 
 environment_training <- expand_grid(
@@ -857,7 +767,7 @@ Includes both temperature and pH
 
 ``` r
 fit_environment <- gam(
-  log(persistence_days) ~ s(temp_c, k = 4) + s(ph, k = 5),
+  log(persistence_days) ~ s(temp_c, k = 4) + s(ph, k = 5), # both predictors
   data = environment_training,
   method = "REML"
 )
@@ -891,6 +801,8 @@ summary(fit_environment)
     -REML = -698.92  Scale est. = 7.9126e-05  n = 225
 
 ## Combined Persistence in Space
+
+As before, but now on a raster gri.
 
 <details open>
 <summary>Hide code</summary>

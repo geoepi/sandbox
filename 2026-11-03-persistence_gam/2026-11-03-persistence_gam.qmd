@@ -27,7 +27,7 @@ This script illustrates a toy model of environmental HPAI persistence based on t
   
    
 ## Load Libraries
-```{r}
+```{r warning=FALSE, message=FALSE}
 library(readxl) # read excel file
 library(readr) # read excel from link
 library(dplyr) # data wrangling
@@ -244,7 +244,7 @@ ggplot(temp.df, aes(x = x, y = y, fill = temp_c)) +
 
 ### Temperature Persistence
 Predict persistence based on values in temperature raster.
-```{r}
+```{r fig.width=8, fig.height=8}
 # predict values from raster
 temp_persist.df <- predict(
   fit_temp,
@@ -398,7 +398,8 @@ p_ph +
   )
 ```
 
-### pH in Space
+### pH in Space  
+Now for the raster version.  
 ```{r fig.width=8, fig.height=8}
 # synthetic clustered pH raster across range [5.8, 8.6]
 ph.r <- rast(nrows = res, ncols = res, xmin = 0, xmax = 1, ymin = 0, ymax = 1)
@@ -474,10 +475,10 @@ ggplot(as.data.frame(ph_persist.r, xy = TRUE), aes(x = x, y = y, fill = lyr.1)) 
 ```
 
 
-## Joint Temperature and pH Model
+## Joint Temperature and pH Model   
+Put both predictors in a common model.  
 ```{r}
 # joint dataset
-
 ref_ph_scale <- ph_response_17(7.2) # pH 7.2, relative scaling applied
 
 environment_training <- expand_grid(
@@ -498,7 +499,7 @@ environment_training <- expand_grid(
 Includes both temperature and pH
 ```{r}
 fit_environment <- gam(
-  log(persistence_days) ~ s(temp_c, k = 4) + s(ph, k = 5),
+  log(persistence_days) ~ s(temp_c, k = 4) + s(ph, k = 5), # both predictors
   data = environment_training,
   method = "REML"
 )
@@ -507,7 +508,8 @@ summary(fit_environment)
 ```
 
 
-## Combined Persistence in Space
+## Combined Persistence in Space  
+As before, but now on a raster gri.
 ```{r}
 env_stack <- c(temp.r, ph.r) # stack both predictor rasters
 names(env_stack) <- c("temp_c", "ph")
