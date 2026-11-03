@@ -1,0 +1,552 @@
+---
+title: "Environmental Persistence Model Concept"
+format:
+  gfm:
+   toc: true
+   toc-depth: 2
+   code-fold: show
+   code-summary: "Hide code"
+   preview-mode: raw
+editor: source
+editor_options: 
+  chunk_output_type: console
+---
+
+## Overview
+
+This script illustrates a toy model of environmental HPAI persistence based on temperature and pH values from literature.
+  
+### Objectives
+1. Demonstrate basic GAM model architecture.  
+2. Fit an temperature-response curve using numeric value ranges. 
+3. Demo how to apply the model to a spatial grid.  
+4. Fit a pH-response curve using numeric value ranges. 
+5. Demo how to apply the pH model to a spatial grid.  
+6. Fit a GAM with both temperature and pH.    
+7. Predict a combined temperature and pH peristence surface.  
+  
+   
+## Load Libraries
+```{r}
+library(readxl) # read excel file
+library(readr) # read excel from link
+library(dplyr) # data wrangling
+library(tidyr) # data wrangling
+library(here) # directory path management
+library(ggplot2) # plotting
+library(mgcv) # fitting mixed models, using non-linear variables
+library(scales) # plotting/transforms
+library(terra) # spatial data
+library(ambient) # create spatial clusters (less boring rasters)
+```
+
+
+## Random Seed
+For reproducibility.  
+```{r}
+set.seed(20261020)
+```
+
+
+## Param Notebook
+Read the older parameter table from Google Drive.  This is a demo of accessing remote data.  
+```{r}
+sheet_id <- "1G3oi49CyQRwj5r6bzqXyJCIPs-Vune5wbCTYWWISokM"
+sheet_name <- "Env Factors" # first tab
+
+# URL for the first Excel tab
+export_url <- sprintf(
+  "https://docs.google.com/spreadsheets/d/%s/gviz/tq?tqx=out:csv&sheet=%s",
+  sheet_id,
+  URLencode(sheet_name)
+)
+
+# Read into a dataframe
+factors_raw <- read_csv(export_url)
+
+# check the data
+head(factors_raw)
+
+
+# environmental categories
+if (!is.null(factors_raw)) {
+  factor_inventory <- factors_raw %>%
+    count(`Environmental Factor`, sort = TRUE)
+
+  print(factor_inventory)
+}
+
+```
+
+
+## Temperature 
+Temperature data from the workbook.  Looking at *Lebarbenchon et al. 2011* especially.
+
+**Example Ranges:**
+Assumptions: in Water with pH = 7.2 and salinity = 0
+Rt = Number of days for a 1-log10 TCID50/mL decrease.  
+  
+Values from notes, temp=days:    
+H3N8: 4C=211, 10C=175, 17C=79, 23C=51, 28C=11   
+H4N6: 4C=270, 10C=193, 17C=102, 23C=51, 28C=13   
+   
+Set up strain-specific table with temperature and days persistent.  We could average, but might check strain differences later.
+
+```{r}
+temperature_evidence <- tibble::tribble(
+  ~strain, ~temp_c, ~persistence_days,
+  "H3N8",      4,              211,
+  "H3N8",     10,              175,
+  "H3N8",     17,               79,
+  "H3N8",     23,               51,
+  "H3N8",     28,               11,
+  "H4N6",      4,              270,
+  "H4N6",     10,              193,
+  "H4N6",     17,              102,
+  "H4N6",     23,               51,
+  "H4N6",     28,               13
+)
+
+print(temperature_evidence)
+```
+
+## Temperature-response Function
+Example here using a GAM because we don`t assume that persistence changes linearly with temperature. The GAM allows the predictor to have a flexible, data-driven smooth shape.  
+  
+The response variable (persistence_days) is log-transformed. This is common for duration type variables that are only positive, right-skewed, or represent exponential decay processes (e.g., pathogen persistence).  
+
+Note that a family argument (e.g., Poisson, Gamma) isn`t specified in the *gam()*; this means it defaults to a Gaussian distribution (it assumes model errors are normally distributed).   
+   
+The *s()* code indicates we want to temp_c to a be a spline (non-linear), in this case with k=4 dimensions (max degrees of freedom).  A little curvy, but not too much.  Increasing k will make it more curvy.
+  
+The *REML* refers tells the model to use Restricted Maximum Likelihood when estimating the smoothing parameter, which tries to balance smoothness and closeness to the data.   
+    
+
+### Run the model:
+```{r}
+fit_temp <- gam(
+  log(persistence_days) ~ s(temp_c, k = 4),
+  data = temperature_evidence,
+  method = "REML"
+)
+
+print(summary(fit_temp))
+```
+
+We have the model, now lets predict to the observed range with equal intervals.
+```{r}
+range(temperature_evidence$temp_c)
+
+temp_grid_observed <- tibble(
+  temp_c = seq(4, 28, by = 0.1)
+)
+
+# predict persistence for each value
+pred_temp_link <- predict(
+  fit_temp,
+  newdata = temp_grid_observed,
+  se.fit = TRUE,
+  type = "link"
+)
+
+
+# create a dataframe
+temp_grid_observed <- temp_grid_observed %>%
+  mutate(
+    log_days = as.numeric(pred_temp_link$fit),
+    se_log_days = as.numeric(pred_temp_link$se.fit),
+    predicted_days = exp(log_days),
+    lower_95 = exp(log_days - 1.96 * se_log_days),
+    upper_95 = exp(log_days + 1.96 * se_log_days)
+  )
+```
+
+
+### Temperature-response Curve
+```{r fig.width=8, fig.height=8}
+p_temperature <- ggplot() +
+  geom_ribbon(
+    data = temp_grid_observed,
+    aes(x = temp_c, ymin = lower_95, ymax = upper_95),
+    alpha = 0.2
+  ) +
+  geom_line(
+    data = temp_grid_observed,
+    aes(x = temp_c, y = predicted_days),
+    linewidth = 1
+  ) +
+  geom_point(
+    data = temperature_evidence,
+    aes(x = temp_c, y = persistence_days, shape = strain),
+    size = 3
+  ) +
+  scale_y_continuous(labels = label_number()) +
+  labs(
+    title = "Empirical temperature",
+    subtitle = "Assumes Water, pH 7.2, salinity 0 (from H3N8/H4N6 notes)",
+    x = "Temperature (deg C)",
+    y = "Persistence (days; Rt)",
+    shape = "Strain"
+  ) +
+  theme_minimal(base_size = 12)
+
+p_temperature
+
+```
+
+
+### Temperature in Space  
+Create a synthetic raster grid representing temperature.  
+```{r fig.width=8, fig.height=8}
+# resolution and grid dimensions
+res <- 100  # 100 x 100 cells
+temp.r <- rast(nrows = res, ncols = res, xmin = 0, xmax = 1, ymin = 0, ymax = 1)
+
+# smooth 2D simplex noise for spatial clustering
+coords <- crds(temp.r)
+noise <- noise_simplex(
+  dim = c(res, res),
+  frequency = 0.03,  # Lower frequency = larger cluster sizes
+  octaves = 2
+)
+
+# rescale noise to [0, 1]
+norm_vals <- (noise - min(noise)) / (max(noise) - min(noise))
+
+# map to the range and round to the nearest 0.1
+target_vals <- 4 + norm_vals * (28 - 4)
+snapped_vals <- round(target_vals, 1)
+
+# assign to the raster
+values(temp.r) <- snapped_vals
+
+# quick plot
+temp.df <- as.data.frame(temp.r, xy = TRUE)
+colnames(temp.df)[3] <- "temp_c"
+
+ggplot(temp.df, aes(x = x, y = y, fill = temp_c)) +
+  geom_raster() +
+  scale_fill_viridis_c(
+    name = "Temperature C",
+    option = "B",
+    limits = c(4, 28),
+    breaks = seq(4, 28, by = 4)
+  ) +
+  coord_fixed(ratio = 1, xlim = c(0, 1), ylim = c(0, 1)) +
+  theme_minimal() +
+  labs(
+    title = "Temperature Raster",
+    x = "X",
+    y = "Y"
+  )
+```
+
+
+### Temperature Persistence
+Predict persistence based on values in temperature raster.
+```{r}
+# predict values from raster
+temp_persist.df <- predict(
+  fit_temp,
+  newdata = temp.df["temp_c"], 
+  se.fit = FALSE,
+  type = "link")
+
+temp.df$temp_persist <- exp(as.numeric(temp_persist.df))
+
+# copy raster
+temp_persist.r <- temp.r
+values(temp_persist.r) <- temp.df$temp_persist
+
+# quick plot
+temp_persist.df <- as.data.frame(temp_persist.r, xy = TRUE)
+colnames(temp_persist.df)[3] <- "Days_temp"
+
+ggplot(temp_persist.df, aes(x = x, y = y, fill = Days_temp)) +
+  geom_raster() +
+  scale_fill_viridis_c(
+    name = "Days",
+    option = "D",
+   ) +
+  coord_fixed(ratio = 1, xlim = c(0, 1), ylim = c(0, 1)) +
+  theme_minimal() +
+  labs(
+    title = "Persistence Days (Temperature)",
+    x = "X",
+    y = "Y"
+  )
+
+
+
+```
+
+
+
+
+
+## pH Influence
+THe pH data range below was from a paper cited in the Excel:  
+Justin D. Brown, Ginger Goekjian, Rebecca Poulson, Steve Valeika, David E. Stallknecht,  
+Avian influenza virus in water: Infectivity is dependent on pH, salinity and temperature,  
+Veterinary Microbiology, Volume 136, Issues 1–2, 2009,   
+https://doi.org/10.1016/j.vetmic.2008.10.027.  
+  
+Recreate info given in Fig 1 of the paper. They used two temperature thresholds. First, create functions based on their formulation:   
+```{r}
+# possible pH range
+ph_values <- c(
+  5.8, 6.2, 6.6, 7.0,
+  7.4, 7.8, 8.2, 8.6
+)
+
+# estimated from Fig 1 in paper @ 17 degrees
+ph_response_17 <- function(ph) {
+  29.25 * exp(
+    -0.5 * ((ph - 7.77) / 0.88)^2
+  )
+}
+
+# estimated from Fig 1 in paper @ 28 degrees
+ph_response_28 <- function(ph) {
+  7.08 * exp(
+    -0.5 * ((ph - 7.78) / 1.00)^2
+  )
+}
+```
+
+Now predict across the full range at equal interval.  
+```{r}
+
+ph_grid <- tibble(
+  ph = seq(min(ph_values), max(ph_values), by = 0.01)
+) %>%
+  mutate(
+    rt_17 = ph_response_17(ph),
+    rt_28 = ph_response_28(ph)
+  )
+
+ph_grid
+
+## pH points for Plotting
+ph_evidence_fit <- tibble(
+  ph = ph_values,
+  rt_17 = ph_response_17(ph),
+  rt_28 = ph_response_28(ph)
+)
+
+```
+
+
+Wrangle the data a bit for a plot: 
+```{r}
+ph_predictions <- ph_grid %>%
+  tidyr::pivot_longer(
+    cols = c(rt_17, rt_28),
+    names_to = "Temperature",
+    values_to = "persistence_days"
+  ) %>%
+  mutate(
+    Temperature = recode(
+      Temperature,
+      rt_17 = "17 C",
+      rt_28 = "28 C"
+    )
+  )
+```
+
+### pH Curves
+```{r}
+p_ph <- ggplot(
+  ph_predictions,
+  aes(
+    x = ph,
+    y = persistence_days,
+    linetype = Temperature
+  )
+) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "Estimated pH response",
+    subtitle = "Brown et al. 2009; distilled water, salinity = 0 ppm",
+    x = "pH",
+    y = "Persistence (days; Rt)",
+    linetype = "Temperature"
+  ) +
+  theme_minimal(base_size = 12)
+
+p_ph +
+  geom_point(
+    data = ph_evidence_fit %>%
+      pivot_longer(
+        cols = c(rt_17, rt_28),
+        names_to = "Temperature",
+        values_to = "persistence_days"
+      ) %>%
+      mutate(
+        Temperature = recode(
+          Temperature,
+          rt_17 = "17 C",
+          rt_28 = "28 C"
+        )
+      ),
+    aes(
+      x = ph,
+      y = persistence_days,
+      shape = Temperature
+    ),
+    size = 2.5
+  )
+```
+
+### pH in Space
+```{r fig.width=8, fig.height=8}
+# synthetic clustered pH raster across range [5.8, 8.6]
+ph.r <- rast(nrows = res, ncols = res, xmin = 0, xmax = 1, ymin = 0, ymax = 1)
+
+# a little spatial heterogeneity
+noise_ph <- noise_simplex(
+  dim = c(res, res),
+  frequency = 0.025,
+  octaves = 2
+)
+
+# rescale noise to [0, 1] and then map to pH range [5.8, 8.6]
+norm_ph <- (noise_ph - min(noise_ph)) / (max(noise_ph) - min(noise_ph))
+target_ph <- min(ph_values) + norm_ph * (max(ph_values) - min(ph_values))
+values(ph.r) <- round(target_ph, 2)
+
+# dataframe for plotting
+ph.df <- as.data.frame(ph.r, xy = TRUE)
+colnames(ph.df)[3] <- "ph"
+
+ggplot(ph.df, aes(x = x, y = y, fill = ph)) +
+  geom_raster() +
+  scale_fill_viridis_c(
+    name = "pH",
+    option = "C",
+    limits = c(5.8, 8.6),
+    breaks = seq(5.8, 8.6, by = 0.4)
+  ) +
+  coord_fixed(ratio = 1, xlim = c(0, 1), ylim = c(0, 1)) +
+  theme_minimal() +
+  labs(
+    title = "pH Raster",
+    x = "X",
+    y = "Y"
+  )
+```
+
+
+### pH Persistence
+```{r fig.width=8, fig.height=8}
+# pH Model, example with 17 degree baseline
+fit_ph <- gam(
+  log(persistence_days) ~ s(ph, k = 5),
+  data = ph_predictions %>% filter(Temperature == "17 C"),
+  method = "REML"
+)
+
+# predict standalone pH persistence across raster cells
+ph_pred_link <- predict(
+  fit_ph,
+  newdata = ph.df["ph"],
+  se.fit = FALSE,
+  type = "link"
+)
+
+# pull predictions
+ph.df$ph_persist <- exp(as.numeric(ph_pred_link))
+
+# pH persistence raster
+ph_persist.r <- ph.r # copy
+values(ph_persist.r) <- ph.df$ph_persist # repalce values
+
+ggplot(as.data.frame(ph_persist.r, xy = TRUE), aes(x = x, y = y, fill = lyr.1)) +
+  geom_raster() +
+  scale_fill_viridis_c(name = "Days", option = "D") +
+  coord_fixed(ratio = 1, xlim = c(0, 1), ylim = c(0, 1)) +
+  theme_minimal() +
+  labs(
+    title = "Persistence Days (pH at 17°C baseline)",
+    x = "X",
+    y = "Y"
+  )
+```
+
+
+## Joint Temperature and pH Model
+```{r}
+# joint dataset
+
+ref_ph_scale <- ph_response_17(7.2) # pH 7.2, relative scaling applied
+
+environment_training <- expand_grid(
+  temp_c = seq(4, 28, length.out = 15), # temp range
+  ph = seq(5.8, 8.6, length.out = 15) # pH range
+) %>%
+  mutate(
+    # predict temperature
+    base_days = exp(as.numeric(predict(fit_temp, newdata = data.frame(temp_c = temp_c)))),
+    # scale persistence based on pH
+    ph_scaler = ph_response_17(ph) / ref_ph_scale,
+    persistence_days = pmax(base_days * ph_scaler, 0.01)
+  )
+```
+
+
+### Fit joint GAM  
+Includes both temperature and pH
+```{r}
+fit_environment <- gam(
+  log(persistence_days) ~ s(temp_c, k = 4) + s(ph, k = 5),
+  data = environment_training,
+  method = "REML"
+)
+
+summary(fit_environment)
+```
+
+
+## Combined Persistence in Space
+```{r}
+env_stack <- c(temp.r, ph.r) # stack both predictor rasters
+names(env_stack) <- c("temp_c", "ph")
+
+# convert to dataframe 
+env_grid.df <- as.data.frame(env_stack, xy = TRUE)
+
+# predict (log days) and transform back to natural scale
+pred_env_link <- predict(
+  fit_environment,
+  newdata = env_grid.df[, c("temp_c", "ph")],
+  type = "link"
+)
+
+# get result
+env_grid.df$persistence_days <- exp(as.numeric(pred_env_link))
+
+# back into raster
+final_persist.r <- rast(temp.r)
+values(final_persist.r) <- env_grid.df$persistence_days
+names(final_persist.r) <- "persistence_days"
+```
+
+
+## Final Persistence Surface
+Estimated persistence based on temperature and pH influences from literature
+```{r fig.width=8, fig.height=8}
+ggplot(env_grid.df, aes(x = x, y = y, fill = persistence_days)) +
+  geom_raster() +
+  scale_fill_viridis_c(
+    name = "Persistence\n(days)",
+    option = "turbo"
+  ) +
+  coord_fixed(ratio = 1, xlim = c(0, 1), ylim = c(0, 1)) +
+  theme_minimal() +
+  labs(
+    title = "HPAI Environmental Persistence Grid",
+    subtitle = "Temperature and pH",
+    x = "X",
+    y = "Y"
+  )
+```
